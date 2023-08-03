@@ -10,8 +10,7 @@
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/tundrasoft/deno.svg?logo=docker)](https://hub.docker.com/r/tundrasoft/deno)
 
-
-<img align="center" src="https://deno.land/logo.svg" height="150px" alt="the deno mascot dinosaur standing in the rain">
+![Deno Mascot](https://deno.land/logo.svg)
 
 Docker container for Deno. This is meant to be a lightweight docker image built on alpine. The run commands are present as 
 env variables to keep things simple.
