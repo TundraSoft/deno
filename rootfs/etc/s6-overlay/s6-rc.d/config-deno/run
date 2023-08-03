@@ -1,0 +1,7 @@
+#!/usr/bin/with-contenv sh
+
+DENODIR=${DENO_DIR:-'/deno-dir'}
+
+mkdir -p ${DENODIR}
+
+setgroup ${DENODIR} /app

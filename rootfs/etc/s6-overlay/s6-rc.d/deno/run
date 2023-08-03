@@ -1,0 +1,77 @@
+#!/usr/bin/with-contenv sh
+
+RUN_ARGS=
+
+if [ ! -z $ALLOW_ALL ]
+then
+  RUN_ARGS="--allow-all"
+else
+  if [ ! -z $ALLOW_HRTIME ]
+  then
+    RUN_ARGS="${RUN_ARGS} --allow-hrtime"
+  fi
+
+  if [ ! -z $ALLOW_SYS ]
+  then
+    RUN_ARGS="${RUN_ARGS} --allow-sys"
+  fi
+
+  if [ ! -z $ALLOW_ENV ]
+  then
+    if [ $ALLOW_ENV == "1" ]
+    then
+      RUN_ARGS="${RUN_ARGS} --allow-env"
+    else
+      RUN_ARGS="${RUN_ARGS} --allow-env=${ALLOW_ENV}"
+    fi
+  fi
+
+  if [ ! -z $ALLOW_NET ]
+  then
+    if [ $ALLOW_NET == "1" ]
+    then
+      RUN_ARGS="${RUN_ARGS} --allow-net"
+    else
+      RUN_ARGS="${RUN_ARGS} --allow-net=${ALLOW_NET}"
+    fi
+  fi
+
+  if [ ! -z $READ_PATHS ]
+  then
+    if [ $READ_PATHS == "1" ]
+    then
+      RUN_ARGS="${RUN_ARGS} --allow-read"
+    else
+      RUN_ARGS="${RUN_ARGS} --allow-read=${READ_PATHS}"
+    fi
+  fi
+
+  if [ ! -z $WRITE_PATHS ]
+  then
+    if [ $WRITE_PATHS == "1" ]
+    then
+      RUN_ARGS="${RUN_ARGS} --allow-write"
+    else
+      RUN_ARGS="${RUN_ARGS} --allow-write=${WRITE_PATHS}"
+    fi
+  fi
+
+  if [ ! -z $ALLOW_RUN ]
+  then
+    if [ $ALLOW_RUN == "1" ]
+    then
+      RUN_ARGS="${RUN_ARGS} --allow-run"
+    else
+      RUN_ARGS="${RUN_ARGS} --allow-run=${ALLOW_RUN}"
+    fi
+  fi
+fi
+
+# Update permission
+setgroup /app
+
+# Change dir to app (just in case)
+cd /app
+
+# Run
+exec s6-setuidgid tundra deno run $RUN_ARGS $FILE
