@@ -27,6 +27,9 @@ docker run --name deno -p 8080:8080 -e FILE=https://deno.land/std/examples/chat/
 
 Once it has booted, you can go check http://localhost:8080/ and the chat window must appear.
 
+**NOTE** Although the docker exposes port 3000 by default, 8080 is used here 
+as that is the port configured in the example
+
 If you would like to build basis this image then simply use this in the FROM 
 statement in docker file:
 
@@ -38,7 +41,6 @@ or tag to a specific version
 ```docker
 FROM tundrasoft/deno:1.34.0
 ```
-
 
 ### Environment variables
 
@@ -61,6 +63,13 @@ Below are the environment variables available
 
 Refer documentation of deno at [Deno Permissions](https://deno.land/manual/basics/permissions)
 
+### S6 Events
+
+Below are the "events" which are provided by this container during startup:
+| Name | Depends On | Action |
+|--- | --- | --- |
+| config-deno | config-start | Prepares the environment (Deno directory etc) |
+| deno | config-deno & service-start | Starts the deno app |
 
 ### Volumes
 
@@ -100,7 +109,6 @@ Below are the arguments available:
 |---|---|
 | DENO_VERSION | The version of deno to use. |
 | ALPINE_VERSION | The version of alpine to build on, defaults to latest |
-
 
 ## Installed Components
 
