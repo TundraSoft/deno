@@ -5,7 +5,10 @@ FROM tundrasoft/alpine-glibc:${ALPINE_VERSION}
 
 LABEL maintainer="Abhinav A V <abhai2k@gmail.com>"
 
-ARG DENO_VERSION
+ARG DENO_VERSION\
+    TARGETPLATFORM\
+    TARGETARCH\
+    TARGETVARIANT
 
 USER root
 
@@ -23,14 +26,8 @@ ENV DENO_DIR=/deno-dir\
 RUN set -eux; \
     mkdir -p /app ${DENO_DIR}; \
     apk add --no-cache --virtual=.build-dependencies wget unzip; \
-    if [ "${TARGETARCH}" == "amd64" ]; \
-    then \
-      wget https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip -O /tmp/deno.zip; \
-    fi; \
-    if [ "${TARGETARCH}" == "arm64" ] || [[ "${TARGETARCH}" == "arm" && "${TARGETVARIANT}" == 'v8' ]]; \
-    then \
-      wget https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-aarch64-apple-darwin.zip -O /tmp/deno.zip; \
-    fi; \
+    apk add --no-cache libgcc; \
+    wget https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip -O /tmp/deno.zip; \
     unzip /tmp/deno.zip; \
     mv deno /bin/deno;  \
     setgroup /bin/deno ${DENO_DIR}; \
