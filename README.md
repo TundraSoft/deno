@@ -27,14 +27,14 @@ docker run --name deno -p 8080:8080 -e FILE=https://deno.land/std/examples/chat/
 
 Once it has booted, you can go check http://localhost:8080/ and the chat window must appear.
 
-**NOTE** Although the docker exposes port 3000 by default, 8080 is used here 
-as that is the port configured in the example
+**NOTE** Port 8080 is used here s that is the port configured in the example.
+ Change this to suite your application.
 
 If you would like to build basis this image then simply use this in the FROM 
 statement in docker file:
 
 ```docker
-FROM tundrasoft/deno
+FROM tundrasoft/deno:latest
 ```
 
 or tag to a specific version
@@ -57,6 +57,7 @@ Below are the environment variables available
 | READ_PATHS | This will set the --allow-read flag. Set to 1 to enable read any path | /app |
 | WRITE_PATHS | This will set the --allow-write flag. Set to 1 to enable write in any path | /app |
 | ALLOW_RUN | This will set the --allow-run flag. Set to 1 to allow execution of any command | |
+| UNSTABLE | Enable unstable API. Set to 1 to allow. Use this with caution | 0 |
 | PUID | The User ID (created) | 1000 |
 | PGID | The Group ID (created) | 1000 |
 | TZ | The timezone to set | UTC |
@@ -80,8 +81,7 @@ reside. This can and ideally should be exposed as a volume
 
 ### Ports
 
-`3000` - By default this port is exposed. However, you need to ensure that 
-the deno app either uses this port or expose a custom port of your choice.
+No ports are exposed by default. Simply expose the ports basis your application configuration.
 
 ### Monitoring
 
@@ -89,7 +89,7 @@ There is a healthcheck present which checks the status of deno service. It
 runs every 30 seconds. 
 
 ```docker
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s CMD /usr/bin/healthcheck.sh
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD /usr/bin/healthcheck.sh
 ```
 
 ## Building the image
