@@ -57,15 +57,15 @@ jobs:
           push: false
           tags: ${{ github.repository }}:TEST
           build-args: |
-            ALPINE_VERSION=${{ needs.get-versions.outputs.alpine-versions[0] }}
-            DENO_VERSION=${{ needs.get-versions.outputs.deno-versions[0] }}
+            ALPINE_VERSION=${{ fromJson(needs.get-versions.outputs.alpine-versions)[0] }}
+            DENO_VERSION=${{ fromJson(needs.get-versions.outputs.deno-versions)[0] }}
       -
         name: Run
         run: |
           docker run --rm -it ${{ github.repository }}:TEST
 
   build-base:
-    needs: [get-versions]
+    needs: [get-versions, test-docker-image]
     runs-on: ubuntu-latest
     strategy:
       matrix:
