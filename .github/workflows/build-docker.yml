@@ -78,7 +78,8 @@ jobs:
       -
         name: Run
         run: |
-          docker run --rm -it ${{ steps.build.outputs.imageid }} /bin/sh
+          echo ${{ steps.meta.outputs.tags }}
+          docker run --rm -it ${{ steps.meta.outputs.tags }} /bin/sh
 
   build-base:
     needs: [get-versions, test-docker-image]
