@@ -62,7 +62,7 @@ jobs:
       -
         name: Run
         run: |
-          docker run --rm -it ${{ github.repository }}:TEST
+          docker run --rm -it ${{ github.repository }}:TEST /bin/sh
 
   build-base:
     needs: [get-versions, test-docker-image]
