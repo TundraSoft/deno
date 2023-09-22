@@ -56,6 +56,7 @@ jobs:
           platforms: linux/amd64
           push: false
           tags: ${{ github.repository }}:TEST
+          load: true
           build-args: |
             ALPINE_VERSION=${{ fromJson(needs.get-versions.outputs.alpine-versions)[0] }}
             DENO_VERSION=${{ fromJson(needs.get-versions.outputs.deno-versions)[0] }}
