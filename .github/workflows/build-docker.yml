@@ -57,8 +57,8 @@ jobs:
           push: false
           tags: ${{ github.repository }}:TEST
           build-args: |
-            ALPINE_VERSION=needs.get-versions.outputs.alpine-versions[0]
-            DENO_VERSION=needs.get-versions.outputs.deno-versions[0]
+            ALPINE_VERSION=${{ needs.get-versions.outputs.alpine-versions[0] }}
+            DENO_VERSION=${{ needs.get-versions.outputs.deno-versions[0] }}
       -
         name: Run
         run: |
