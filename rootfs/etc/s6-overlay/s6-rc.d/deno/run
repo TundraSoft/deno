@@ -2,18 +2,17 @@
 
 RUN_ARGS=
 
-if [ ! -z $ALLOW_ALL ] && [ "${ALLOW_ALL}" == "1"]
+if [ ! -z $ALLOW_ALL ]
 then
   RUN_ARGS="--allow-all"
 else
-  if [ ! -z $ALLOW_HRTIME ] && [ "${ALLOW_HRTIME}" == "1" ]
+  if [ ! -z $ALLOW_HRTIME ]
   then
     RUN_ARGS="${RUN_ARGS} --allow-hrtime"
   fi
 
   if [ ! -z $ALLOW_SYS ]
   then
-    # @TODO - Support sub commands
     RUN_ARGS="${RUN_ARGS} --allow-sys"
   fi
 
@@ -68,10 +67,8 @@ else
   fi
 fi
 
-if [ -z $UNSTABLE ] && [ "$UNSTABLE" == "1" ]
-then
-  RUN_ARGS="${RUN_ARGS} --unstable"
-fi
+# Change dir to app (just in case)
+cd /app
 
 # Run
 exec s6-setuidgid tundra deno run $RUN_ARGS $FILE
