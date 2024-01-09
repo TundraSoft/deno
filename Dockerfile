@@ -18,6 +18,7 @@ ENV DENO_DIR=/deno-dir\
     ALLOW_SYS=\
     ALLOW_ENV=\
     ALLOW_NET=1\
+    UNSTABLE=\
     READ_PATHS=/app\
     WRITE_PATHS=/app\
     ALLOW_RUN=\
