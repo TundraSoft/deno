@@ -2,9 +2,12 @@
 
 RUN_ARGS=
 
+if [ ! -z $UNSTABLE ]
+  RUN_ARGS="--unstable"
+fi
 if [ ! -z $ALLOW_ALL ]
 then
-  RUN_ARGS="--allow-all"
+  RUN_ARGS="${RUN_ARGS} --allow-all"
 else
   if [ ! -z $ALLOW_HRTIME ]
   then
