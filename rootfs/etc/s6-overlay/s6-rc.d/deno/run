@@ -74,6 +74,17 @@ fi
 # Change dir to app (just in case)
 cd /app
 
-echo $RUN_ARGS
+# echo $RUN_ARGS
+if [ -z $FILE ]
+then
+  cat << EOF >> /app/app.ts
+export {}
+console.log('Welcome to Deno 🦕')
+while (true) {
+  await new Promise((resolve) => setTimeout(resolve, 1000))
+}
+EOF
+  FILE=app.ts
+fi
 # Run
 exec s6-setuidgid tundra deno run $RUN_ARGS $FILE
