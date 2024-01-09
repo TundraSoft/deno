@@ -74,6 +74,6 @@ fi
 # Change dir to app (just in case)
 cd /app
 
-echo $RUN_ARGS
+# echo $RUN_ARGS
 # Run
 exec s6-setuidgid tundra deno run $RUN_ARGS $FILE
