@@ -3,6 +3,7 @@
 RUN_ARGS=
 
 if [ ! -z $UNSTABLE ]
+then
   RUN_ARGS="--unstable"
 fi
 if [ ! -z $ALLOW_ALL ]
