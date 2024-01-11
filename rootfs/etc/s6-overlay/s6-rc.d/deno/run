@@ -67,10 +67,10 @@ else
   fi
 fi
 
-# if [ ! -z $UNSTABLE ]
-# then
-#   RUN_ARGS="${RUN_ARGS} --unstable"
-# fi
+if [ ! -z $UNSTABLE ]
+then
+  RUN_ARGS="${RUN_ARGS} --unstable"
+fi
 # Change dir to app (just in case)
 cd /app
 
