@@ -83,17 +83,11 @@ jobs:
         build-args: | 
           ALPINE_VERSION=${{ matrix.alpine-version }}
           DENO_VERSION=${{ matrix.deno-version }}
-    
+          
     -
       name: Test
       run: |
-        output=$(docker run --rm local/deno:test /bin/sh -c "cat /etc/alpine-release | grep -q ${{ matrix.alpine-version }} && echo 'OK' || echo 'KO'")
-        if [ "$output" == "OK" ]; then
-          echo "Test Passed"
-        else
-          echo "Test Failed"
-          exit 1
-        fi
+        docker run --rm local/deno:test /bin/sh -c "deno --version"
   
   publish:
     if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
