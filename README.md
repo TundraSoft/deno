@@ -97,7 +97,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD /usr/bin/healthch
 The image can be built using the below command
 
 ```sh
-docker build --no-cache --build-arg ALPINE_VERSION=latest --build-arg DENO_VERSION=1.32.3 -t tundrasoft/deno .
+docker build --no-cache --build-arg ALPINE_VERSION=3.18 --build-arg DENO_VERSION=1.32.3 -t tundrasoft/deno .
 ```
 
 ### Build Arguments
