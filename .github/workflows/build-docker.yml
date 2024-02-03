@@ -11,145 +11,167 @@ on:
       - .github/PULL_REQUEST_TEMPLATE*
   pull_request:
     branches: [ main ]
-  # schedule:
-  #   - cron: '0 0 * * 0'
+  schedule:
+    - cron: '0 0 * * 0'
 
 jobs:
-  get-versions:
+  setup:
     runs-on: ubuntu-latest
     outputs:
       alpine-versions: ${{ steps.alpine-versions.outputs.alpine-versions }}
-      deno-versions: ${{ steps.fetch-versions.outputs.deno-versions }}
+      latest-alpine-version: ${{ steps.alpine-versions.outputs.latest-alpine-version }}
+      deno-versions: ${{ steps.deno-versions.outputs.deno-versions }}
+      latest-deno-version: ${{ steps.deno-versions.outputs.latest-deno-version }}
     steps:
       - 
         name: Get Alpine Versions
         id: alpine-versions
         run: |
-          ALPINE_VERSIONS=$(curl -s https://cz.alpinelinux.org/alpine/ | grep -oP '(?<=v)[^/]+(?=/")' | sort -V | tail -n 3 | tac | jq -Rcn '[inputs]')
+          ALPINE_MINOR_VERSIONS=$(curl -s https://cz.alpinelinux.org/alpine/ | grep -oP '(?<=v)[^/]+(?=/")' | sort -V | tail -n 3)
+          ALPINE_VERSIONS=""
+          for VERSION in $ALPINE_MINOR_VERSIONS
+          do
+            # Skip version 3.19 as deno + alpine 3.19 glibc has issues
+            if [ "$VERSION" = "3.19" ]; then
+              continue
+            fi
+            ALPINE_VERSIONS+="${VERSION} "
+            PATCH_VERSIONS=$(curl -s https://cz.alpinelinux.org/alpine/v${VERSION}/releases/x86_64/ | grep -oP '(?<=alpine-standard-)[0-9]+\.[0-9]+\.[0-9]+(?=-x86_64.iso)' | sort -V | uniq | tail -n 3)
+            for PATCH in $PATCH_VERSIONS
+            do
+              ALPINE_VERSIONS+="${PATCH} "
+            done
+          done
+          ALPINE_VERSIONS=$(echo $ALPINE_VERSIONS | tr ' ' '\n' | jq -Rcn '[inputs] | sort | reverse')
+          LATEST_VERSION=$(echo $ALPINE_VERSIONS | tr ' ' '\n' | jq -r '.[0]')
           echo "alpine-versions=${ALPINE_VERSIONS}" >> "$GITHUB_OUTPUT"
+          echo "latest-alpine-version=${LATEST_VERSION}" >> "$GITHUB_OUTPUT"
       - 
         name: Get Deno Versions
-        id: fetch-versions
+        id: deno-versions
         run: |
-          DENO_VERSIONS=$(curl -s https://api.github.com/repos/denoland/deno/releases | jq -r '.[].tag_name' | sed 's/v//' | sort -V | tail -n 4 | tac | jq -Rcn '[inputs]')
+          DENO_VERSIONS=$(curl -s https://api.github.com/repos/denoland/deno/releases | jq -r '.[].tag_name' | sed 's/v//' | sort -V | tail -n 5 | tac | jq -Rcn '[inputs]')
+          LATEST_VERSION=$(echo $DENO_VERSIONS | tr ' ' '\n' | jq -r '.[0]')
           echo "deno-versions=${DENO_VERSIONS}" >> "$GITHUB_OUTPUT"
+          echo "latest-deno-version=${LATEST_VERSION}" >> "$GITHUB_OUTPUT"
   
-  # test-docker-image:
-  #   runs-on: ubuntu-latest
-  #   needs: [get-versions]
-  #   steps: 
-  #     -
-  #       name: Checkout
-  #       uses: actions/checkout@v4
-  #     -
-  #       name: Set up QEMU
-  #       uses: docker/setup-qemu-action@v3
-  #     -
-  #       name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v3
-  #     -
-  #       name: Docker meta
-  #       id: meta
-  #       uses: docker/metadata-action@v5
-  #       with:
-  #         # list of Docker images to use as base name for tags
-  #         images: |
-  #           ${{ github.repository }}
-  #         flavor: |
-  #           latest=false
-  #         # generate Docker tags based on the following events/attributes
-  #         tags: |
-  #           type=raw,prefix=,value=test,enable=true,priority=1000
-  #     - 
-  #       name: Build
-  #       id: build
-  #       uses: docker/build-push-action@v4
-  #       with:
-  #         context: .
-  #         # platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/arm/v8
-  #         platforms: linux/amd64
-  #         push: false
-  #         tags: ${{ steps.meta.outputs.tags }}
-  #         labels: ${{ steps.meta.outputs.labels }}
-  #         load: true
-  #         build-args: |
-  #           ALPINE_VERSION=${{ fromJson(needs.get-versions.outputs.alpine-versions)[0] }}
-  #           DENO_VERSION=${{ fromJson(needs.get-versions.outputs.deno-versions)[0] }}
-  #     -
-  #       name: Run
-  #       run: |
-  #         echo ${{ steps.meta.outputs.tags }}
-  #         docker run --rm -it ${{ steps.meta.outputs.tags }} /bin/sh
-
-  build-base:
-    needs: [get-versions]
+  test:
+    needs: setup
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: true
       matrix:
-        alpine-version: ${{ fromJson(needs.get-versions.outputs.alpine-versions) }}
-        deno-version: ${{ fromJson(needs.get-versions.outputs.deno-versions) }}
-    
+        alpine-version: ${{ fromJson(needs.setup.outputs.alpine-versions) }}
+        deno-version: ${{ fromJson(needs.setup.outputs.deno-versions) }}
     steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v4
-      -
-        # Add support for more platforms with QEMU (optional)
-        # https://github.com/docker/setup-qemu-action
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      -
-        name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          # list of Docker images to use as base name for tags
-          images: |
-            ${{ github.repository }}
-            ghcr.io/${{ github.repository }}
-          flavor: |
-            latest=false
-          # generate Docker tags based on the following events/attributes
-          tags: |
-            type=raw,prefix=,value=latest,enable=${{ ((matrix.alpine-version == fromJson(needs.get-versions.outputs.alpine-versions)[0]) && (matrix.deno-version == fromJson(needs.get-versions.outputs.deno-versions)[0]) && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch))) }},priority=1000
-            type=semver,prefix=,pattern={{major}}.{{minor}}.{{patch}},value=${{ matrix.deno-version }},enable=${{ ((matrix.alpine-version == fromJson(needs.get-versions.outputs.alpine-versions)[0]) && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch))) }},priority=900
-            type=raw,prefix=,value=${{ matrix.deno-version }}-alpine-${{ matrix.alpine-version }},enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }},priority=300
-            type=raw,prefix=,value=${{ github.ref_name }},enable=${{ (matrix.alpine-version == fromJson(needs.get-versions.outputs.alpine-versions)[0]) && (matrix.deno-version == fromJson(needs.get-versions.outputs.deno-versions)[0]) && (github.ref != format('refs/heads/{0}', github.event.repository.default_branch)) }},priority=1000
-            type=raw,prefix=,value=${{ github.ref_name }}-${{ matrix.deno-version }},enable=${{ matrix.alpine-version == fromJson(needs.get-versions.outputs.alpine-versions)[0] && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }},priority=900
-            type=raw,prefix=,value=${{ github.ref_name }}-${{ matrix.deno-version }}-alpine-${{ matrix.alpine-version }},enable=${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }},priority=300
-      -
-        name: Login to DockerHub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3 
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      -
-        name: Login to GHCR
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GIT_HUB_TOKEN }}
-      -
-        name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          # platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/arm/v8
-          platforms: linux/amd64
-          provenance: false
-          build-args: |
-            ALPINE_VERSION=${{ matrix.alpine-version }}
-            DENO_VERSION=${{ matrix.deno-version }}
-          push: ${{ ((github.event_name != 'pull_request')) }}
-          # push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+    - 
+      uses: actions/checkout@v2
+    
+    - 
+      name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+    
+    -
+      name: Build for Test
+      id: build
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        load: true
+        tags: |
+          local/deno:test
+        build-args: | 
+          ALPINE_VERSION=${{ matrix.alpine-version }}
+          DENO_VERSION=${{ matrix.deno-version }}
+          
+    -
+      name: Test
+      run: |
+        docker run --rm local/deno:test /bin/sh -c "deno --version"
+  
+  publish:
+    if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    needs: [setup, test]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        alpine-version: ${{ fromJson(needs.setup.outputs.alpine-versions) }}
+        deno-version: ${{ fromJson(needs.setup.outputs.deno-versions) }}
+    steps:
+    
+    - 
+      uses: actions/checkout@v2
+
+    - 
+      name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    -
+      name: Login to DockerHub
+      uses: docker/login-action@v3 
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    -
+      name: Login to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GIT_HUB_TOKEN }}
+
+    -
+      name: Meta Tags
+      id: meta-tags
+      uses: docker/metadata-action@v5
+      with:
+        flavor: |
+          latest=false
+        # list of Docker images to use as base name for tags
+        images: |
+          name=${{ github.repository }},enable=true
+          name=ghcr.io/${{ github.repository }},enable=true
+        # generate Docker tags based on the following events/attributes
+        # type=sha,prefix=,suffix=,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+        labels: |
+          org.opencontainers.image.source=${{ github.repositoryUrl }}
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.created=${{ github.event.repository.pushed_at }}
+          org.opencontainers.image.authors=${{ github.actor }}
+          org.opencontainers.image.vendor=Tundrasoft
+          org.opencontainers.image.licenses=MIT
+          org.opencontainers.image.documentation=${{ github.repositoryUrl }}/blob/main/README.md
+          org.opencontainers.image.description=Alpine Linux with Deno
+          org.opencontainers.image.title=Alpine Linux with Deno
+        tags: |
+          type=raw,prefix=,value=latest,enable=${{ (matrix.alpine-version == needs.setup.outputs.latest-alpine-version && matrix.deno-version == needs.setup.outputs.latest-deno-version) }}
+          type=raw,prefix=,pattern=${{ matrix.alpine-version }},enable=${{ matrix.deno-version == needs.setup.outputs.latest-deno-version && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          type=raw,prefix=,value=alpine-${{ matrix.alpine-version }}-deno-${{ matrix.deno-version }},suffix=,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+    - 
+      name: Push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64
+        provenance: false
+        build-args: |
+          ALPINE_VERSION=${{ matrix.alpine-version }}
+          DENO_VERSION=${{ matrix.deno-version }}
+        push: true
+        tags: ${{ steps.meta-tags.outputs.tags }}
+        labels: ${{ steps.meta-tags.outputs.labels }}
+  
+  chore:
+    needs: publish
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    steps:
+      - 
+        uses: actions/checkout@v2
+        
       -
         name: Update repo description
         uses: peter-evans/dockerhub-description@v3
@@ -157,3 +179,4 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: ${{ github.repository }}
+  
