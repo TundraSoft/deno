@@ -65,7 +65,7 @@ jobs:
         deno-version: ${{ fromJson(needs.setup.outputs.deno-versions) }}
     steps:
     - 
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     
     - 
       name: Set up Docker Buildx
@@ -101,7 +101,7 @@ jobs:
     steps:
     
     - 
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - 
       name: Set up Docker Buildx
@@ -170,7 +170,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - 
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         
       -
         name: Update repo description
