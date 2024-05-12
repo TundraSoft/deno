@@ -115,7 +115,7 @@ jobs:
         tags: ${{ env.TEST_TAG }}
         labels: ${{ steps.meta.outputs.labels }}
         build-args: |
-          ALPINE_VERSION=${{ matrix.alpine-branch }}
+          ALPINE_VERSION=new-build-${{ matrix.alpine-branch }}
           DENO_VERSION=${{ matrix.deno-version }}
     -
       name: Test Image
@@ -156,7 +156,7 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         build-args: |
-          ALPINE_VERSION=${{ matrix.alpine-branch }}
+          ALPINE_VERSION=new-build-${{ matrix.alpine-branch }}
           S6_VERSION=${{ matrix.deno-version }}
   
   chore:
