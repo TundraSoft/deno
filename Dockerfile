@@ -1,15 +1,19 @@
 ARG ALPINE_VERSION=latest\
     DENO_VERSION
 
-FROM gcr.io/distroless/cc as cc
+FROM gcr.io/distroless/cc-debian12:latest AS cc
+
+FROM tundrasoft/alpine:${ALPINE_VERSION} AS sym
+
+COPY --from=cc --chown=root:root --chmod=755 /lib/*-linux-gnu/ld-linux-* /usr/local/lib/
+
+RUN mkdir -p /tmp/lib
+RUN ln -s /usr/local/lib/ld-linux-* /tmp/lib/
 
 FROM tundrasoft/alpine:${ALPINE_VERSION}
-LABEL maintainer="Abhinav A V <36784+abhai2k@users.noreply.github.com>"
 
 ARG DENO_VERSION \
-    TARGETPLATFORM \
-    TARGETARCH \
-    TARGETVARIANT
+  TARGETPLATFORM
 
 ENV DENO_DIR=/deno-dir\
     ALLOW_ALL=\
@@ -22,27 +26,26 @@ ENV DENO_DIR=/deno-dir\
     WRITE_PATHS=/app\
     ALLOW_RUN=\
     FILE=\
-    LANG=C.UTF-8\
     LD_LIBRARY_PATH="/usr/local/lib"
 
 COPY --from=cc --chown=root:root --chmod=755 /lib/*-linux-gnu/* /usr/local/lib/
-COPY --from=cc --chown=root:root --chmod=755 /lib/ld-linux-* /lib/
+COPY --from=sym --chown=root:root --chmod=755 /tmp/lib /lib
+COPY --from=sym --chown=root:root --chmod=755 /tmp/lib /lib64
 
 RUN set -eux; \
-  mkdir /lib64; \
-  ln -s /usr/local/lib/ld-linux-* /lib64/; \
-  mkdir -p ${DENO_DIR}; \
+  apk --update --no-cache add curl; \
   case "${TARGETPLATFORM}" in \
   "linux/amd64"|"linux/x86_64") export DENO_ARCH="x86_64-unknown-linux-gnu" ;; \
   "linux/arm64"|"linux/arm/v8") export DENO_ARCH="aarch64-unknown-linux-gnu" ;; \
   *) echo "Unsupported platform: ${TARGETPLATFORM}" ; exit 1 ;; \
   esac; \
-  wget https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-${DENO_ARCH}.zip -O /tmp/deno.zip; \
-  unzip /tmp/deno.zip; \
-  mv deno /bin/deno;  \
+  curl -Ls https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-${DENO_ARCH}.zip | unzip -q -d /tmp - 'deno'; \
+  mv /tmp/deno /bin/; \
+  mkdir -p ${DENO_DIR}; \
   setgroup /bin/deno ${DENO_DIR}; \
   chmod 0755 /bin/deno; \
-  rm /tmp/*;
+  rm -rf /tmp/*;
+
 
 COPY /rootfs /
 
