@@ -116,7 +116,7 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         build-args: |
           ALPINE_VERSION=${{ matrix.alpine-branch }}
-          S6_VERSION=${{ matrix.deno-version }}
+          DENO_VERSION=${{ matrix.deno-version }}
     -
       name: Test Image
       run: |
