@@ -1,6 +1,8 @@
 #!/usr/bin/with-contenv sh
 
 RUN_ARGS=
+TASK_NAME=${TASK:-}
+DENO_CMD='run'
 
 if [ ! -z $ALLOW_ALL ]
 then
@@ -74,17 +76,21 @@ fi
 # Change dir to app (just in case)
 cd /app
 
-# echo $RUN_ARGS
-if [ -z $FILE ]
+if [ ! -z $TASK_NAME ]
 then
-  cat << EOF >> /app/app.ts
-export {}
-console.log('Welcome to Deno 🦕')
-while (true) {
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-}
+  exec s6-setuidgid tundra deno task $TASK_NAME
+else
+  if [ -z $FILE ]
+  then
+    cat << EOF >> /app/app.ts
+  export {}
+  console.log('Welcome to Deno 🦕')
+  while (true) {
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+  }
 EOF
-  FILE=app.ts
+    FILE=app.ts
+  fi
+  # Run
+  exec s6-setuidgid tundra deno run $RUN_ARGS $FILE
 fi
-# Run
-exec s6-setuidgid tundra deno run $RUN_ARGS $FILE

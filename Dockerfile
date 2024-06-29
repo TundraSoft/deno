@@ -3,14 +3,14 @@ ARG ALPINE_VERSION=latest\
 
 FROM gcr.io/distroless/cc-debian12:latest AS cc
 
-FROM tundrasoft/alpine:${ALPINE_VERSION} AS sym
+FROM tundrasoft/alpine:new-build-${ALPINE_VERSION} AS sym
 
 COPY --from=cc --chown=root:root --chmod=755 /lib/*-linux-gnu/ld-linux-* /usr/local/lib/
 
 RUN mkdir -p /tmp/lib
 RUN ln -s /usr/local/lib/ld-linux-* /tmp/lib/
 
-FROM tundrasoft/alpine:${ALPINE_VERSION}
+FROM tundrasoft/alpine:new-build-${ALPINE_VERSION}
 
 ARG DENO_VERSION \
   TARGETPLATFORM
@@ -26,6 +26,7 @@ ENV DENO_DIR=/deno-dir\
     WRITE_PATHS=/app\
     ALLOW_RUN=\
     FILE=\
+    TASK=\
     LD_LIBRARY_PATH="/usr/local/lib"
 
 COPY --from=cc --chown=root:root --chmod=755 /lib/*-linux-gnu/* /usr/local/lib/

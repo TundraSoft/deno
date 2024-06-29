@@ -49,6 +49,15 @@ Below are the environment variables available
 | Name | Description | Default Value |
 |---|---|---|
 | DENO_DIR | The directory where cached items are stored | /deno-dir |
+| TASK | If there is a deno.json file and contains "tasks" section, then run the task. All permission flags are ignored | N/A |
+| FILE | The file to run. The permission flags are added when running | N/A |
+| PUID | The User ID (created) | 1000 |
+| PGID | The Group ID (created) | 1000 |
+| TZ | The timezone to set | UTC |
+
+Below are the permission flags (env args). These args will only be used if FILE mode is used
+| Name | Description | Default Value |
+|---|---|---|
 | ALLOW_ALL | This is the deno run argument. Will set -A or --allow-all | |
 | ALLOW_HRTIME | This will allow --allow-hrtime flag to be set for deno | |
 | ALLOW_SYS | This will set the --allow-sys flag. | |
@@ -58,9 +67,6 @@ Below are the environment variables available
 | WRITE_PATHS | This will set the --allow-write flag. Set to 1 to enable write in any path | /app |
 | ALLOW_RUN | This will set the --allow-run flag. Set to 1 to allow execution of any command | |
 | UNSTABLE | Enable unstable API. Set to 1 to allow. Use this with caution | 0 |
-| PUID | The User ID (created) | 1000 |
-| PGID | The Group ID (created) | 1000 |
-| TZ | The timezone to set | UTC |
 
 Refer documentation of deno at [Deno Permissions](https://deno.land/manual/basics/permissions)
 
