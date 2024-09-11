@@ -7,8 +7,8 @@ FROM tundrasoft/alpine:new-build-${ALPINE_VERSION} AS sym
 
 COPY --from=cc --chown=root:root --chmod=755 /lib/*-linux-gnu/ld-linux-* /usr/local/lib/
 
-RUN mkdir -p /tmp/lib
-RUN ln -s /usr/local/lib/ld-linux-* /tmp/lib/
+RUN mkdir -p /tmp/lib \
+    && ln -s /usr/local/lib/ld-linux-* /tmp/lib/
 
 FROM tundrasoft/alpine:new-build-${ALPINE_VERSION}
 
@@ -40,7 +40,8 @@ RUN set -eux; \
   "linux/arm64"|"linux/arm/v8") export DENO_ARCH="aarch64-unknown-linux-gnu" ;; \
   *) echo "Unsupported platform: ${TARGETPLATFORM}" ; exit 1 ;; \
   esac; \
-  curl -Ls https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-${DENO_ARCH}.zip | unzip -q -d /tmp - 'deno'; \
+  curl -Ls https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-${DENO_ARCH}.zip \
+    | unzip -q -d /tmp - 'deno'; \
   mv /tmp/deno /bin/; \
   mkdir -p ${DENO_DIR}; \
   setgroup /bin/deno ${DENO_DIR}; \
@@ -50,6 +51,6 @@ RUN set -eux; \
 
 COPY /rootfs /
 
-HEALTHCHECK --interval=60s --timeout=10s --start-period=30s CMD /usr/bin/healthcheck.sh
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s CMD ["/usr/bin/healthcheck.sh"]
 
 WORKDIR /app
