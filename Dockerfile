@@ -44,8 +44,8 @@ RUN set -eux; \
     | unzip -q -d /tmp - 'deno'; \
   mv /tmp/deno /bin/; \
   mkdir -p ${DENO_DIR}; \
-  setgroup /bin/deno ${DENO_DIR}; \
   chmod 0755 /bin/deno; \
+  setgroup /bin/deno ${DENO_DIR}; \
   rm -rf /tmp/*;
 
 
