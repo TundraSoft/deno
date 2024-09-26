@@ -19,14 +19,15 @@ ARG DENO_VERSION \
 
 ENV DENO_DIR=/deno-dir\
     ALLOW_ALL=\
-    ALLOW_HRTIME=\
-    ALLOW_SYS=\
     ALLOW_ENV=\
+    ALLOW_FFI=\
+    ALLOW_HRTIME=\
     ALLOW_NET=1\
-    UNSTABLE=\
+    ALLOW_RUN=\
+    ALLOW_SYS=\
+    UNSTABLES=\
     READ_PATHS=/app\
     WRITE_PATHS=/app\
-    ALLOW_RUN=\
     FILE=\
     TASK=\
     LD_LIBRARY_PATH="/usr/local/lib"

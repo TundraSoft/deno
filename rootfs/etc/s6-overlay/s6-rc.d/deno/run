@@ -67,11 +67,23 @@ else
       RUN_ARGS="${RUN_ARGS} --allow-run=${ALLOW_RUN}"
     fi
   fi
+
+  if [ ! -z $ALLOW_FFI ]
+  then
+    if [ $ALLOW_FFI == "1" ]
+    then
+      RUN_ARGS="${RUN_ARGS} --allow-ffi"
+    else
+      RUN_ARGS="${RUN_ARGS} --allow-ffi=${ALLOW_FFI}"
+    fi
+  fi
 fi
 
-if [ ! -z $UNSTABLE ]
-then
-  RUN_ARGS="${RUN_ARGS} --unstable"
+if [ ! -z "$UNSTABLE" ]; then
+  IFS=',' read -ra ADDR <<< "$UNSTABLE"
+  for val in "${ADDR[@]}"; do
+    RUN_ARGS="${RUN_ARGS} --unstable-${val}"
+  done
 fi
 # Change dir to app (just in case)
 cd /app
