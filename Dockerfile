@@ -12,6 +12,8 @@ RUN mkdir -p /tmp/lib \
 
 FROM tundrasoft/alpine:new-build-${ALPINE_VERSION}
 
+LABEL maintainer="Abhinav A V <36784+abhai2k@users.noreply.github.com>"
+
 ARG DENO_VERSION \
   TARGETPLATFORM
 
