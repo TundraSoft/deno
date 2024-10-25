@@ -1,4 +1,6 @@
 #!/usr/bin/with-contenv sh
+cd /app
+
 if [ ! -z "$TASK" ]; then
   exec s6-setuidgid tundra deno task $TASK
 elif [ ! -z "$FILE" ]; then
