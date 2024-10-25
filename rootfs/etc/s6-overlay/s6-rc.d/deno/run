@@ -1,6 +1,6 @@
 #!/usr/bin/with-contenv sh
 if [ ! -z "$TASK" ]; then
-  exec s6-setuidgid tundra deno task --no-prompt $TASK
+  exec s6-setuidgid tundra deno task $TASK
 elif [ ! -z "$FILE" ]; then
   RUN_ARGS=
   # Lets check if we have permissions
