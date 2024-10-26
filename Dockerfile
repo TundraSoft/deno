@@ -30,7 +30,7 @@ ENV DENO_DIR=/deno-dir\
     UNSTABLE=\
     FILE=\
     TASK=\
-    LD_LIBRARY_PATH="/usr/local/lib"
+    LD_LIBRARY_PATH="/usr/local/lib:/lib:/lib64"
 
 COPY --from=cc --chown=root:root --chmod=755 /lib/*-linux-gnu/* /usr/local/lib/
 COPY --from=sym --chown=root:root --chmod=755 /tmp/lib /lib
