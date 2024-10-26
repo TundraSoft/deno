@@ -3,14 +3,14 @@ ARG ALPINE_VERSION=latest\
 
 FROM gcr.io/distroless/cc-debian12:latest AS cc
 
-FROM tundrasoft/alpine:new-build-${ALPINE_VERSION} AS sym
+FROM tundrasoft/alpine:${ALPINE_VERSION} AS sym
 
 COPY --from=cc --chown=root:root --chmod=755 /lib/*-linux-gnu/ld-linux-* /usr/local/lib/
 
 RUN mkdir -p /tmp/lib \
     && ln -s /usr/local/lib/ld-linux-* /tmp/lib/
 
-FROM tundrasoft/alpine:new-build-${ALPINE_VERSION}
+FROM tundrasoft/alpine:${ALPINE_VERSION}
 
 LABEL maintainer="Abhinav A V <36784+abhai2k@users.noreply.github.com>"
 
