@@ -123,6 +123,7 @@ jobs:
       name: Test Image
       run: |
         output=$(docker run --rm ${{ env.TEST_TAG}} /bin/sh -c "LD_LIBRARY_PATH=/usr/local/lib:/lib:/lib64 deno --version | grep -q ${{ matrix.deno-version }} && echo 'OK' || echo 'KO'")
+        echo $output
         if [ "$output" == "OK" ]; then
           echo "Test Passed"
         else
