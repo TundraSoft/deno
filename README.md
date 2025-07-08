@@ -64,15 +64,15 @@ docker run -d \
 ## 🏷️ Available Tags
 
 <!-- TAGS-START -->
+## Tags
+
 | Version | Tags |
 |---------|------|
 | [latest](https://hub.docker.com/r/tundrasoft/deno/tags?name=latest) | Latest stable release |
-| [2.1.4](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.1.4) | Deno 2.1.4 on Alpine 3.20 |
-| [2.1.3](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.1.3) | Deno 2.1.3 on Alpine 3.20 |
-| [2.1.2](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.1.2) | Deno 2.1.2 on Alpine 3.20 |
-| [alpine-3.20-2.1.4](https://hub.docker.com/r/tundrasoft/deno/tags?name=alpine-3.20-2.1.4) | Deno 2.1.4 on Alpine 3.20 |
-| [alpine-3.19-2.1.4](https://hub.docker.com/r/tundrasoft/deno/tags?name=alpine-3.19-2.1.4) | Deno 2.1.4 on Alpine 3.19 |
-| [alpine-edge-2.1.4](https://hub.docker.com/r/tundrasoft/deno/tags?name=alpine-edge-2.1.4) | Deno 2.1.4 on Alpine Edge |
+| [edge](https://hub.docker.com/r/tundrasoft/deno/tags?name=edge) | Edge/development version |
+| [2.4](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4) | [2.4.1](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.1), [2.4.0](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.0) |
+| [2.3](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.3) | [2.3.7](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.3.7), [2.3.6](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.3.6), [2.3.5](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.3.5) |
+
 <!-- TAGS-END -->
 
 ---
