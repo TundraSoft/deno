@@ -3,7 +3,7 @@
 A lightweight, secure Deno runtime image built on Alpine Linux with S6 overlay, comprehensive permissions management, and developer-friendly utilities.
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/TundraSoft/deno/build-docker.yml?event=push&logo=github&label=build)](https://github.com/TundraSoft/deno/actions/workflows/build-docker.yml)
-[![Security Scan](https://img.shields.io/github/actions/workflow/status/TundraSoft/deno/security-scan.yml?event=schedule&logo=shield&label=security)](https://github.com/TundraSoft/deno/actions/workflows/security-scan.yml)
+[![Security Scan](https://img.shields.io/github/actions/workflow/status/TundraSoft/deno/security-scan.yml?logo=adguard&label=security)](https://github.com/TundraSoft/deno/actions/workflows/security-scan.yml)
 [![Docker Pulls](https://img.shields.io/docker/pulls/tundrasoft/deno.svg?logo=docker)](https://hub.docker.com/r/tundrasoft/deno)
 [![License](https://img.shields.io/github/license/TundraSoft/deno.svg)](https://github.com/TundraSoft/deno/blob/main/LICENSE)
 
