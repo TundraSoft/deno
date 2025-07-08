@@ -6,3 +6,6 @@
 **/.gitkeep
 **/*.md
 LICENSE
+.trivyignore
+.grype.yaml
+SECURITY.md

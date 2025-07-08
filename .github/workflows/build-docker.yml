@@ -1,22 +1,41 @@
-name: Docker Build
+name: Build and Test Docker Image
 
 on:
-  repository_dispatch:
-    types: [build]
   push:
     paths-ignore:
       - .dockerignore
       - .gitignore
       - .github/ISSUE_TEMPLATE/*
       - .github/PULL_REQUEST_TEMPLATE*
-      - ./*.md
+      - ./README.md
       - ./LICENSE
+    # Ignore CI if commit message contains '[skip ci]' (e.g., from update-readme chore)
+    # This is a GitHub Actions convention, not a YAML field, so we use a job-level if below
   pull_request:
     branches: [ main ]
-  # schedule:
-  #   - cron: '0 0 * * 0'
+  schedule:
+    - 
+      cron: '0 0 * * 0'
 
 jobs:
+
+  # Secret Scanning with GitLeaks (runs early to catch secrets before build)
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history for GitLeaks to scan all commits
+          fetch-depth: 0
+
+      - name: Run GitLeaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_KEY}}
+
   setup:
     runs-on: ubuntu-latest
     outputs:
@@ -56,10 +75,11 @@ jobs:
           LATEST_VERSION=$(echo $DENO_VERSIONS | tr ' ' '\n' | jq -r '.[0]')
           echo "deno-versions=${DENO_VERSIONS}" >> "$GITHUB_OUTPUT"
           echo "latest-deno-version=${LATEST_VERSION}" >> "$GITHUB_OUTPUT"
-  
+      
   build:
     needs: setup
     runs-on: ubuntu-latest
+      
     strategy:
       fail-fast: true
       matrix:
@@ -77,6 +97,11 @@ jobs:
       name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
     
+    -
+      name: Get the ALPINE VERSION
+      run: |
+        echo "ALPINE_VERSION=$(curl -s https://cz.alpinelinux.org/alpine/${{ matrix.alpine-branch }}/releases/x86_64/latest-releases.yaml | awk '/version:/ {print $2; exit}')" >> $GITHUB_ENV
+    
     - 
       name: Extract Docker Metadata
       id: meta
@@ -85,7 +110,7 @@ jobs:
         flavor: |
           latest=false
         images: |
-          name=${{ github.repository }},enable=true
+          name=${{ github.repository }},enable=false
           name=ghcr.io/${{ github.repository }},enable=true
         labels: |
           org.opencontainers.image.source=${{ github.repositoryUrl }}
@@ -127,23 +152,105 @@ jobs:
         build-args: |
           ALPINE_VERSION=${{ matrix.alpine-branch }}
           DENO_VERSION=${{ matrix.deno-version }}
+    
     -
       name: Test Image
       run: |
-        output=$(docker run --rm ${{ env.TEST_TAG}} /bin/sh -c "LD_LIBRARY_PATH=/usr/local/lib:/lib:/lib64 deno --version | grep -q ${{ matrix.deno-version }} && echo 'OK' || echo 'KO'")
-        # if [ "$output" == "OK" ]; then
-        #   echo "Test Passed"
-        # else
-        #   echo "Test Failed"
-        #   exit 1
-        # fi
+        echo "Running comprehensive Deno tests..."
+        echo "Testing Deno ${{ matrix.deno-version }} on Alpine ${{ matrix.alpine-branch }}"
+        
+        # Test 1: Verify Deno version
+        echo "Test 1: Checking Deno version..."
+        echo "Expected version: ${{ matrix.deno-version }}"
+        
+        # First, let's see what version is actually installed (bypass S6 entrypoint)
+        actual_version=$(docker run --rm --entrypoint="" ${{ env.TEST_TAG}} /bin/sh -c "LD_LIBRARY_PATH=/usr/local/lib:/lib:/lib64 deno --version 2>&1 || echo 'FAILED_TO_GET_VERSION'")
+        echo "Actual deno --version output:"
+        echo "$actual_version"
+        
+        # Now check if the expected version is in the output
+        version_check=$(echo "$actual_version" | grep -q "${{ matrix.deno-version }}" && echo 'OK' || echo 'KO')
+        if [ "$version_check" != "OK" ]; then
+          echo "❌ Version test failed"
+          echo "Expected to find '${{ matrix.deno-version }}' in version output"
+          exit 1
+        fi
+        echo "✅ Version test passed"
+        
+        # Test 2: Test basic Deno execution with eval
+        echo "Test 2: Testing basic Deno execution..."
+        eval_result=$(docker run --rm --entrypoint="" ${{ env.TEST_TAG}} /bin/sh -c "LD_LIBRARY_PATH=/usr/local/lib:/lib:/lib64 deno eval 'console.log(\"Hello Deno\")' 2>&1 || echo 'EVAL_FAILED'")
+        echo "Eval output: $eval_result"
+        eval_output=$(echo "$eval_result" | grep -q "Hello Deno" && echo 'OK' || echo 'KO')
+        if [ "$eval_output" != "OK" ]; then
+          echo "❌ Basic execution test failed"
+          exit 1
+        fi
+        echo "✅ Basic execution test passed"
+        
+        # Test 3: Test Deno permissions and file operations (Deno 2.x has implicit permissions for eval)
+        echo "Test 3: Testing file operations..."
+        file_result=$(docker run --rm --entrypoint="" ${{ env.TEST_TAG}} /bin/sh -c "LD_LIBRARY_PATH=/usr/local/lib:/lib:/lib64 deno eval 'Deno.writeTextFileSync(\"/tmp/test.txt\", \"test\"); console.log(Deno.readTextFileSync(\"/tmp/test.txt\"))' 2>&1 || echo 'FILE_FAILED'")
+        echo "File operation output: $file_result"
+        file_output=$(echo "$file_result" | grep -q "test" && echo 'OK' || echo 'KO')
+        if [ "$file_output" != "OK" ]; then
+          echo "❌ File operations test failed"
+          exit 1
+        fi
+        echo "✅ File operations test passed"
+        
+        # Test 4: Test Deno with TypeScript
+        echo "Test 4: Testing TypeScript compilation..."
+        ts_result=$(docker run --rm --entrypoint="" ${{ env.TEST_TAG}} /bin/sh -c "LD_LIBRARY_PATH=/usr/local/lib:/lib:/lib64 deno eval 'const x: number = 42; console.log(\`Number: \${x}\`)' 2>&1 || echo 'TS_FAILED'")
+        echo "TypeScript output: $ts_result"
+        ts_output=$(echo "$ts_result" | grep -q "Number: 42" && echo 'OK' || echo 'KO')
+        if [ "$ts_output" != "OK" ]; then
+          echo "❌ TypeScript test failed"
+          exit 1
+        fi
+        echo "✅ TypeScript test passed"
+        
+        # Test 5: Test Deno with network APIs
+        echo "Test 5: Testing network APIs availability..."
+        network_result=$(docker run --rm --entrypoint="" ${{ env.TEST_TAG}} /bin/sh -c "LD_LIBRARY_PATH=/usr/local/lib:/lib:/lib64 deno eval 'console.log(typeof fetch)' 2>&1 || echo 'NETWORK_FAILED'")
+        echo "Network API output: $network_result"
+        network_output=$(echo "$network_result" | grep -q "function" && echo 'OK' || echo 'KO')
+        if [ "$network_output" != "OK" ]; then
+          echo "❌ Network API test failed"
+          exit 1
+        fi
+        echo "✅ Network API test passed"
+        
+        # Test 6: Test Deno task functionality
+        echo "Test 6: Testing Deno task functionality..."
+        task_result=$(docker run --rm --entrypoint="" ${{ env.TEST_TAG}} /bin/sh -c "cd /tmp && echo '{\"tasks\": {\"hello\": \"echo Hello from task\"}}' > deno.json && LD_LIBRARY_PATH=/usr/local/lib:/lib:/lib64 deno task hello 2>&1 || echo 'TASK_FAILED'")
+        echo "Task output: $task_result"
+        task_output=$(echo "$task_result" | grep -q "Hello from task" && echo 'OK' || echo 'KO')
+        if [ "$task_output" != "OK" ]; then
+          echo "❌ Deno task test failed"
+          exit 1
+        fi
+        echo "✅ Deno task test passed"
+        
+        # Test 7: Test Deno info command
+        echo "Test 7: Testing Deno info command..."
+        info_result=$(docker run --rm --entrypoint="" ${{ env.TEST_TAG}} /bin/sh -c "LD_LIBRARY_PATH=/usr/local/lib:/lib:/lib64 deno info 2>&1 || echo 'INFO_FAILED'")
+        echo "Info output: $info_result"
+        info_output=$(echo "$info_result" | grep -q "DENO_DIR" && echo 'OK' || echo 'KO')
+        if [ "$info_output" != "OK" ]; then
+          echo "❌ Deno info test failed"
+          exit 1
+        fi
+        echo "✅ Deno info test passed"
+        
+        echo "🎉 All tests passed successfully!"
     
-    -
-      name: Login to DockerHub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+    # -
+    #   name: Login to DockerHub
+    #   uses: docker/login-action@v3
+    #   with:
+    #     username: ${{ secrets.DOCKER_USERNAME }}
+    #     password: ${{ secrets.DOCKER_PASSWORD }}
     
     -
       name: Login to GHCR
@@ -169,19 +276,77 @@ jobs:
           ALPINE_VERSION=${{ matrix.alpine-branch }}
           DENO_VERSION=${{ matrix.deno-version }}
   
-  chore:
-    needs: build
+  # Lets do a few chores
+  update-readme:
+    needs: [setup, build]
     if: github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     steps:
-      - 
+      - name: Checkout code
         uses: actions/checkout@v4
-        
-      -
-        name: Update repo description
-        uses: peter-evans/dockerhub-description@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          repository: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install Python dependencies
+        run: |
+          pip install -r .github/scripts/requirements.txt
+      
+      - name: Update README with new tags
+        run: |
+          # Use the Deno versions that were actually built
+          DENO_VERSIONS='${{ needs.setup.outputs.deno-versions }}'
+          echo "Processing Deno versions that were built: $DENO_VERSIONS"
+          
+          # Convert JSON array to bash array
+          VERSIONS=$(echo "$DENO_VERSIONS" | jq -r '.[]')
+          
+          # Process each version that was built
+          for VERSION in $VERSIONS; do
+            echo "Updating README with successfully built Deno version: $VERSION"
+            python .github/scripts/update_readme_tags.py README.md "$VERSION" "${{ github.repository }}"
+          done
+      
+      - name: Generate Docker Hub README
+        run: |
+          echo "Generating DOCKER.md for Docker Hub..."
+          python .github/scripts/generate_docker_readme.py \
+            README.md \
+            DOCKER.md \
+            '${{ needs.setup.outputs.deno-versions }}' \
+            '${{ github.repository }}' \
+            '${{ github.repository }}' \
+            '${{ needs.setup.outputs.alpine-branches }}' \
+            'description:DESCRIPTION-START,DESCRIPTION-END;env-vars:ENV-VARS-START,ENV-VARS-END;build-args:BUILD-ARGS-START,BUILD-ARGS-END'
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add README.md DOCKER.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update README.md and DOCKER.md with latest tags [skip ci]"
+            git push origin ${{ github.ref_name }}
+          fi
   
+  # chore:
+  #   needs: build
+  #   if: github.ref_name == github.event.repository.default_branch
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - 
+  #       uses: actions/checkout@v4
+  #     -
+  #       name: Update repo description
+  #       uses: peter-evans/dockerhub-description@v4
+  #       with:
+  #         username: ${{ secrets.DOCKER_USERNAME }}
+  #         password: ${{ secrets.DOCKER_PASSWORD }}
+  #         repository: ${{ github.repository }}
+
