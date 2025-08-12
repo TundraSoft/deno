@@ -75,7 +75,7 @@ jobs:
     
     steps:
     - 
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     
     - 
       name: Set up Docker Buildx
@@ -267,7 +267,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       
@@ -326,7 +326,7 @@ jobs:
     continue-on-error: true
     steps:
       - 
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       -
         name: Update repo description
         uses: peter-evans/dockerhub-description@v4
