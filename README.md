@@ -70,7 +70,7 @@ docker run -d \
 |---------|------|
 | [latest](https://hub.docker.com/r/tundrasoft/deno/tags?name=latest) | Latest stable release |
 | [edge](https://hub.docker.com/r/tundrasoft/deno/tags?name=edge) | Edge/development version |
-| [2.4](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4) | [2.4.3](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.3), [2.4.2](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.2), [2.4.1](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.1), [2.4.0](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.0) |
+| [2.4](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4) | [2.4.4](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.4), [2.4.3](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.3), [2.4.2](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.2), [2.4.1](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.1), [2.4.0](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.0) |
 | [2.3](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.3) | [2.3.7](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.3.7), [2.3.6](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.3.6), [2.3.5](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.3.5) |
 
 <!-- TAGS-END -->
