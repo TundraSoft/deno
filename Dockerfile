@@ -12,7 +12,14 @@ RUN mkdir -p /tmp/lib \
 
 FROM tundrasoft/alpine:${ALPINE_VERSION}
 
-LABEL maintainer="Abhinav A V <36784+abhai2k@users.noreply.github.com>"
+LABEL maintainer="Abhinav A V <36784+abhai2k@users.noreply.github.com>" \
+      org.opencontainers.image.title="Deno Runtime on Alpine Linux" \
+      org.opencontainers.image.description="Lightweight, secure Deno runtime image built on Alpine Linux with S6 overlay, comprehensive permissions management, and developer-friendly utilities" \
+      org.opencontainers.image.vendor="TundraSoft" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.url="https://github.com/TundraSoft/deno" \
+      org.opencontainers.image.documentation="https://github.com/TundraSoft/deno/blob/main/README.md" \
+      org.opencontainers.image.source="https://github.com/TundraSoft/deno.git"
 
 ARG DENO_VERSION \
   TARGETPLATFORM
@@ -54,6 +61,7 @@ RUN set -eux; \
 
 COPY /rootfs /
 
+# nosemgrep: dockerfile.security.missing-user.missing-user
 HEALTHCHECK --interval=60s --timeout=10s --start-period=30s CMD ["/usr/bin/healthcheck.sh"]
 
 WORKDIR /app
