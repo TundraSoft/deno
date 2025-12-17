@@ -5,6 +5,10 @@ FROM gcr.io/distroless/cc-debian12:latest AS cc
 
 FROM tundrasoft/alpine:${ALPINE_VERSION} AS sym
 
+# Triple COPY pattern for distroless glibc compatibility:
+# This pattern extracts glibc and loader libraries from distroless to ensure
+# proper compatibility with Deno's pre-built binaries which depend on glibc.
+# Step 1: Extract ld-linux from distroless (dynamic linker)
 COPY --from=cc --chown=root:root --chmod=755 /lib/*-linux-gnu/ld-linux-* /usr/local/lib/
 
 RUN mkdir -p /tmp/lib \
@@ -44,6 +48,10 @@ ENV DENO_DIR=/deno-dir\
     FILE=\
     TASK=\
     LD_LIBRARY_PATH="/usr/local/lib:/lib:/lib64"
+
+# Service Supervision Configuration (S6 Overlay):
+# S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0: Infinite startup wait time - prevents premature service timeout.
+# S6_KILL_FINISH_MAXTIME=5000: Grace period (milliseconds) for graceful shutdown before hard kill.
 
 COPY --from=cc --chown=root:root --chmod=755 /lib/*-linux-gnu/* /usr/local/lib/
 COPY --from=sym --chown=root:root --chmod=755 /tmp/lib /lib

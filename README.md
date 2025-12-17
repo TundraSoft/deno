@@ -650,24 +650,120 @@ volumes:
 
 ### Troubleshooting
 
-**Issue: "Permission denied" errors**
+#### "Permission denied" errors
+
+**Symptoms:** Files cannot be read/written, or network calls fail
+
+**Solutions:**
 ```bash
-# Verify permissions with ALLOW_READ, ALLOW_WRITE, ALLOW_NET
-docker run -e ALLOW_READ=/app -e ALLOW_WRITE=/tmp \
-  -e ALLOW_NET=api.example.com tundrasoft/deno:latest
+# Grant read permission to specific path
+docker run -e ALLOW_READ=/app \
+  -e FILE=/app/main.ts tundrasoft/deno:latest
+
+# Grant read + write permissions
+docker run -e ALLOW_READ=/app \
+  -e ALLOW_WRITE=/tmp \
+  -e FILE=/app/main.ts tundrasoft/deno:latest
+
+# Grant network access to specific domain
+docker run -e ALLOW_NET=api.example.com \
+  -e FILE=/app/main.ts tundrasoft/deno:latest
+
+# Allow all permissions (development only)
+docker run -e ALLOW_ALL=1 \
+  -e FILE=/app/main.ts tundrasoft/deno:latest
 ```
 
-**Issue: Application not starting**
+#### Application not starting
+
+**Symptoms:** Container exits immediately or hangs
+
+**Debug steps:**
 ```bash
-# Check logs and healthcheck
+# View logs to see startup errors
 docker logs <container-id>
+
+# Run with DEBUG mode for verbose output
+docker run -it -e DEBUG=1 -e FILE=/app/main.ts tundrasoft/deno:latest
+
+# Check healthcheck status
 docker exec <container-id> /usr/bin/healthcheck.sh
+
+# Verify file exists and is readable
+docker exec <container-id> ls -la /app/main.ts
 ```
 
-**Issue: Slow startup**
-- First run downloads Deno modules (see ALLOW_NET for network)
-- Use volume mount for `/deno-dir` to preserve cache
-- Consider prewarming with multi-stage builds
+#### Slow cold start
+
+**Symptoms:** First run takes 30+ seconds to download dependencies
+
+**Root causes & solutions:**
+
+1. **First-time module download:**
+   ```bash
+   # Persist cache using volume
+   docker run -v deno-cache:/deno-dir \
+     -e FILE=/app/main.ts tundrasoft/deno:latest
+   ```
+
+2. **Pre-warm cache during build:**
+   ```dockerfile
+   FROM tundrasoft/deno:latest
+   COPY . /app
+   RUN deno cache /app/main.ts
+   ENV FILE=/app/main.ts
+   ```
+
+3. **Network timeouts:**
+   ```bash
+   # Increase S6 startup timeout (default 0 = infinite)
+   docker run -e S6_CMD_WAIT_FOR_SERVICES_MAXTIME=60000 \
+     -e FILE=/app/main.ts tundrasoft/deno:latest
+   ```
+
+#### Lock file issues
+
+**Symptoms:** "Cannot create lock file" or permission errors in read-only containers
+
+**Solution:**
+```bash
+# Disable lock file for read-only deployments
+docker run --read-only \
+  -e DENO_NO_LOCK=1 \
+  -e FILE=/app/main.ts tundrasoft/deno:latest
+```
+
+#### Module caching problems
+
+**Symptoms:** "Module not found" or "Failed to fetch" errors
+
+**Solutions:**
+```bash
+# Use persistent cache volume
+docker run -v deno-cache:/deno-dir \
+  -e FILE=/app/main.ts tundrasoft/deno:latest
+
+# Pre-cache dependencies with deno cache
+docker run -v deno-cache:/deno-dir \
+  -w /app \
+  tundrasoft/deno:latest \
+  deno cache https://deno.land/std@0.208.0/mod.ts
+```
+
+#### Watch mode not restarting
+
+**Symptoms:** File changes don't trigger app restart with WATCH=1
+
+**Check:**
+```bash
+# Verify watch mode is working
+docker run -it -e WATCH=1 -e DEBUG=1 \
+  -e FILE=/app/main.ts \
+  -v $(pwd):/app \
+  tundrasoft/deno:latest
+
+# Look for file change messages in logs
+```
 
 ---
 
