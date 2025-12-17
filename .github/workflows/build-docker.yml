@@ -251,8 +251,10 @@ jobs:
       with:
         context: .
         push: true
-        #,linux/arm/v7
-        platforms: linux/amd64,linux/arm64
+        # Build matrix optimization:
+        # - Edge Alpine: amd64 only (QEMU trigger issues on arm)
+        # - Stable versions: amd64, arm64, arm/v7 (dropped arm/v6 - EOL)
+        platforms: ${{ matrix.alpine-branch == 'edge' && 'linux/amd64' || 'linux/amd64,linux/arm64,linux/arm/v7' }}
         provenance: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
