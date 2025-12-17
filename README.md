@@ -22,6 +22,8 @@ A lightweight, secure Deno runtime image built on Alpine Linux with S6 overlay, 
   - [Environment Variables](#environment-variables)
   - [Permission Flags](#permission-flags)
   - [Volumes](#volumes)
+- [🏗️ Build-Time Optimization](#-build-time-optimization)
+- [🔧 Development Mode](#-development-mode)
 - [⚙️ Service Management](#️-service-management)
 - [⏰ Cron Jobs](#-cron-jobs)
 - [🔧 Building](#-building)
@@ -202,7 +204,88 @@ These environment variables control Deno's runtime permissions (used only with `
 | `/crons` | Directory for cron job files (automatically loaded) |
 | `/deno-dir` | Deno cache directory (for persisting dependencies) |
 
-### 🔧 Development Mode
+---
+
+## 🏗️ Build-Time Optimization
+
+### Cache Warming for Faster Deployments
+
+Pre-warm the Deno cache during image build to eliminate cold-start dependency downloads:
+
+**Simple file caching:**
+```dockerfile
+FROM tundrasoft/deno:latest
+
+COPY . /app
+
+# Pre-warm cache during build
+RUN deno cache /app/main.ts
+
+ENV FILE=/app/main.ts
+ENV ALLOW_NET=1
+```
+
+**With dependencies file:**
+```dockerfile
+FROM tundrasoft/deno:latest
+
+COPY deps.ts /app/
+COPY main.ts /app/
+
+# Cache all dependencies first (better layer caching)
+RUN deno cache /app/deps.ts
+# Then cache the main app
+RUN deno cache /app/main.ts
+
+ENV FILE=/app/main.ts
+ENV ALLOW_NET=1
+```
+
+**With deno.json tasks:**
+```dockerfile
+FROM tundrasoft/deno:latest
+
+COPY . /app
+
+# Cache dependencies defined in deno.json
+RUN deno cache --reload /app/deno.json
+
+ENV TASK=start
+ENV ALLOW_ALL=1
+```
+
+**Multi-stage optimized build:**
+```dockerfile
+FROM tundrasoft/deno:latest AS cache
+
+COPY deno.lock deps.ts /app/
+RUN deno cache --reload /app/deps.ts
+
+FROM tundrasoft/deno:latest
+
+# Copy pre-cached dependencies
+COPY --from=cache /deno-dir /deno-dir
+COPY . /app
+
+RUN deno cache /app/main.ts
+
+ENV FILE=/app/main.ts
+ENV ALLOW_NET=1
+```
+
+### Benefits
+
+- ⚡ **Faster cold starts** - No dependency downloads at runtime
+- 📦 **Reproducible builds** - Same dependencies every build
+- 🔒 **Offline compatible** - Works in isolated environments
+- 🎯 **Layer caching** - Separate cache layer for better Docker caching
+- 🚀 **Production ready** - No surprise downloads in production
+
+---
+
+## 🔧 Development Mode
+
+### Development setup
 
 Development mode combines `DEBUG`, `WATCH`, and `DENO_LOG` for optimal developer experience:
 
