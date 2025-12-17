@@ -1,6 +1,8 @@
 # 🦕 TundraSoft Deno Runtime Image
 
+<!-- DESCRIPTION-START -->
 A lightweight, secure Deno runtime image built on Alpine Linux with S6 overlay, comprehensive permissions management, and developer-friendly utilities.
+<!-- DESCRIPTION-END -->
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/TundraSoft/deno/build-docker.yml?event=push&logo=github&label=build)](https://github.com/TundraSoft/deno/actions/workflows/build-docker.yml)
 [![Security Scan](https://img.shields.io/github/actions/workflow/status/TundraSoft/deno/security-scan.yml?logo=adguard&label=security)](https://github.com/TundraSoft/deno/actions/workflows/security-scan.yml)
@@ -16,13 +18,17 @@ A lightweight, secure Deno runtime image built on Alpine Linux with S6 overlay, 
 - [✨ Features](#-features)
 - [📖 Usage](#-usage)
   - [Basic Usage](#basic-usage)
+  - [Running Applications](#-running-applications)
   - [Environment Variables](#environment-variables)
   - [Permission Flags](#permission-flags)
   - [Volumes](#volumes)
 - [⚙️ Service Management](#️-service-management)
+- [⏰ Cron Jobs](#-cron-jobs)
 - [🔧 Building](#-building)
 - [🔒 Security](#-security)
 - [📚 Components](#-components)
+- [📖 Reference](#reference)
+- [📝 Changelog](#-changelog)
 - [🤝 Contributing](#-contributing)
 
 ---
@@ -47,6 +53,7 @@ docker pull ghcr.io/tundrasoft/deno:latest
 docker run -d \
   -p 8080:8080 \
   -e FILE=https://deno.land/std/examples/chat/server.ts \
+  -e ALLOW_NET=1 \
   --name deno-app \
   tundrasoft/deno:latest
 
@@ -64,8 +71,6 @@ docker run -d \
 ## 🏷️ Available Tags
 
 <!-- TAGS-START -->
-## Tags
-
 | Version | Tags |
 |---------|------|
 | [latest](https://hub.docker.com/r/tundrasoft/deno/tags?name=latest) | Latest stable release |
@@ -73,7 +78,6 @@ docker run -d \
 | [2.5](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.5) | [2.5.6](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.5.6), [2.5.5](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.5.5), [2.5.4](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.5.4), [2.5.3](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.5.3), [2.5.2](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.5.2), [2.5.1](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.5.1), [2.5.0](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.5.0) |
 | [2.4](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4) | [2.4.5](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.5), [2.4.4](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.4), [2.4.3](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.3), [2.4.2](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.2), [2.4.1](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.1), [2.4.0](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.4.0) |
 | [2.3](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.3) | [2.3.7](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.3.7), [2.3.6](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.3.6), [2.3.5](https://hub.docker.com/r/tundrasoft/deno/tags?name=2.3.5) |
-
 <!-- TAGS-END -->
 
 ---
@@ -114,9 +118,9 @@ COPY . /app
 
 For specific versions:
 ```dockerfile
-FROM tundrasoft/deno:2.1.4
+FROM tundrasoft/deno:2.5.6
 # or with specific Alpine version
-FROM tundrasoft/deno:alpine-3.20-2.1.4
+FROM tundrasoft/deno:alpine-3.22-2.5.6
 ```
 
 ### 🎯 Running Applications
@@ -137,17 +141,23 @@ docker run -v $(pwd):/app \
   tundrasoft/deno:latest
 ```
 
-**Run local application:**
+**Run with environment variables and permissions:**
 ```bash
-docker run -v $(pwd):/app \
-  -e FILE=/app/main.ts \
-  -e ALLOW_NET=api.example.com \
-  -e ALLOW_READ=/app \
+docker run -d \
+  -e FILE=/app/server.ts \
+  -e ALLOW_NET=1 \
+  -e ALLOW_READ=/app,/etc/config \
+  -e ALLOW_WRITE=/tmp \
+  -e PUID=1001 \
+  -e PGID=1001 \
+  -e TZ=America/New_York \
+  -v $(pwd):/app \
   tundrasoft/deno:latest
 ```
 
 ### Environment Variables
 
+<!-- ENV-VARS-START -->
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DENO_DIR` | Directory where cached items are stored | `/deno-dir` |
@@ -156,11 +166,13 @@ docker run -v $(pwd):/app \
 | `PUID` | User ID for the `tundra` user | `1000` |
 | `PGID` | Group ID for the `tundra` group | `1000` |
 | `TZ` | Timezone (e.g., `Asia/Kolkata`, `America/New_York`) | `UTC` |
+<!-- ENV-VARS-END -->
 
 ### Permission Flags
 
 These environment variables control Deno's runtime permissions (used only with `FILE` mode):
 
+<!-- PERMISSIONS-START -->
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `ALLOW_ALL` | Enable all permissions (-A or --allow-all) | N/A |
@@ -172,6 +184,7 @@ These environment variables control Deno's runtime permissions (used only with `
 | `ALLOW_WRITE` | File system write access (1 for all, or specify paths) | N/A |
 | `ALLOW_RUN` | Command execution (1 for all, or CSV of commands) | N/A |
 | `UNSTABLE` | Enable unstable APIs (specific features: ffi,cron,etc) | `0` |
+<!-- PERMISSIONS-END -->
 
 > 📚 **Reference:** [Deno Permissions Documentation](https://deno.land/manual/basics/permissions)
 
@@ -181,13 +194,20 @@ These environment variables control Deno's runtime permissions (used only with `
 |------|-------------|
 | `/app` | Application root directory (recommended to mount as volume) |
 | `/crons` | Directory for cron job files (automatically loaded) |
-| `/deno-dir` | Deno cache directory |
+| `/deno-dir` | Deno cache directory (for persisting dependencies) |
 
 ---
 
 ## ⚙️ Service Management
 
-This image uses [S6 Overlay](https://github.com/just-containers/s6-overlay) for advanced process supervision and service management.
+This image uses [S6 Overlay](https://github.com/just-containers/s6-overlay) for advanced process supervision and service management. S6 is a lightweight init system that provides reliable service supervision, dependency management, and graceful shutdown handling.
+
+The Deno service runs your application via the S6 system, ensuring:
+- Automatic restart on failure
+- Graceful shutdown handling
+- Proper signal handling
+- Logging integration
+- Health monitoring
 
 ### 🎯 Service Triggers
 
@@ -198,22 +218,105 @@ S6 provides dependency management through trigger points:
 | `os-ready` | Container booted, basic setup complete |
 | `config-start` | Start configuration changes |
 | `config-ready` | Configuration complete |
-| `service-start` | Begin service initialization |
+| `service-start` | Application services begin |
 | `service-ready` | All services initialized |
 
-### 📋 Built-in Services
+### Adding Custom Services
 
-| Service | Purpose | Dependencies |
-|---------|---------|--------------|
-| `config-deno` | Prepares Deno environment and directory | `config-start` |
-| `deno` | Starts the Deno application | `config-deno`, `service-start` |
-| `crond` | Starts cron daemon | `service-start`, `config-cron` |
+You can extend the Deno image with additional services:
 
-### 💡 Health Monitoring
-
-Built-in health check runs every 30 seconds:
 ```dockerfile
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD /usr/bin/healthcheck.sh
+FROM tundrasoft/deno:latest
+
+# Install additional tools
+RUN apk add --no-cache redis
+
+# Create Redis service
+RUN mkdir -p /etc/s6-overlay/s6-rc.d/redis/dependencies.d
+RUN echo "longrun" > /etc/s6-overlay/s6-rc.d/redis/type
+
+RUN cat > /etc/s6-overlay/s6-rc.d/redis/run << 'EOF'
+#!/command/with-contenv sh
+exec 2>&1
+exec redis-server --bind 127.0.0.1
+EOF
+
+RUN chmod +x /etc/s6-overlay/s6-rc.d/redis/run
+RUN touch /etc/s6-overlay/s6-rc.d/redis/dependencies.d/service-start
+RUN touch /etc/s6-overlay/s6-rc.d/user/contents.d/redis
+```
+
+---
+
+## ⏰ Cron Jobs
+
+### Dynamic Cron Setup
+
+This image provides dynamic cron job loading with environment variable substitution support:
+
+1. **Create cron files** in the `/crons` directory
+2. **Use environment variables** with `$VARIABLE_NAME` syntax
+3. **Pass environment variables** when running the container
+4. **S6 automatically** loads and installs jobs at startup
+
+### Cron Examples
+
+#### Example 1: Basic Scheduled Task
+
+**File:** `/crons/daily-cleanup`
+```bash
+# Run cleanup at 3 AM daily
+0 3 * * * find /tmp -type f -mtime +7 -delete
+```
+
+**Run container:**
+```bash
+docker run -d \
+  -v /host/crons:/crons:ro \
+  tundrasoft/deno:latest
+```
+
+#### Example 2: Application Health Check
+
+**File:** `/crons/health-check`
+```bash
+# Check application health every 5 minutes
+*/5 * * * * curl -f http://localhost:8080/health || exit 1
+```
+
+**Run container:**
+```bash
+docker run -d \
+  -p 8080:8080 \
+  -e FILE=/app/server.ts \
+  -e ALLOW_NET=1 \
+  -v /host/crons:/crons:ro \
+  -v $(pwd):/app \
+  tundrasoft/deno:latest
+```
+
+#### Example 3: Complex Configuration
+
+**File:** `/crons/maintenance-jobs`
+```bash
+# Database backup
+$BACKUP_TIME /usr/local/bin/backup.sh >> /var/log/cron-backup.log 2>&1
+
+# Log rotation
+$LOG_ROTATE_TIME logrotate /etc/logrotate.conf
+
+# Cleanup caches
+$CLEANUP_TIME rm -rf /tmp/deno-cache-*
+```
+
+**Run container with environment substitution:**
+```bash
+docker run -d \
+  -e BACKUP_TIME='0 2 * * *' \
+  -e LOG_ROTATE_TIME='0 0 * * *' \
+  -e CLEANUP_TIME='0 4 * * 0' \
+  -v /host/crons:/crons:ro \
+  tundrasoft/deno:latest
 ```
 
 ---
@@ -224,32 +327,54 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD /usr/bin/healthch
 
 ```bash
 docker build \
-  --build-arg ALPINE_VERSION=3.20 \
-  --build-arg DENO_VERSION=2.1.4 \
+  --build-arg ALPINE_VERSION=latest \
+  --build-arg DENO_VERSION=2.5.6 \
   -t my-deno-image .
 ```
 
 ### ⚙️ Build Arguments
 
+<!-- BUILD-ARGS-START -->
 | Argument | Description | Example |
 |----------|-------------|---------|
-
-| `DENO_VERSION` | Deno runtime version | `2.1.4` |
-| `ALPINE_VERSION` | Alpine Linux version | `3.20` |
+| `ALPINE_VERSION` | Alpine Linux version (base image) | `latest`, `3.22`, `3.21` |
+| `DENO_VERSION` | Deno runtime version | `2.5.6`, `2.4.5`, `2.3.7` |
+<!-- BUILD-ARGS-END -->
 
 ---
 
 ## 🔒 Security
 
-This repository implements comprehensive security scanning and best practices:
+This repository implements comprehensive security scanning:
 
-- �️ **Multi-layered scanning** with Trivy, CodeQL, Semgrep, and Grype
-- � **Secret detection** with GitLeaks (runs early in build process)
-- � **Automated reporting** to GitHub Security tab
+- 🛡️ **Multi-layered scanning** with Trivy, CodeQL, Semgrep, and Grype
+- 🔍 **Secret detection** with GitLeaks (runs early in build process)
+- 📊 **Automated reporting** to GitHub Security tab
 - 🔄 **Daily security scans** and vulnerability monitoring
-- 🔐 **Non-root execution** - Applications run as `tundra` user (UID/GID 1000)
-- 🚫 **Minimal attack surface** - Only essential packages included
-- 🎯 **Permission management** - Granular control over Deno runtime permissions
+
+### Permission Model
+
+Deno provides fine-grained permissions for runtime security:
+
+```bash
+# Minimal permissions (read-only access)
+docker run -e FILE=/app/script.ts \
+  -e ALLOW_READ=/app \
+  tundrasoft/deno:latest
+
+# Network with specific domain whitelist
+docker run -e FILE=/app/fetch.ts \
+  -e ALLOW_NET=api.example.com,cdn.jsdelivr.net \
+  tundrasoft/deno:latest
+
+# Restricted execution (no command execution)
+docker run -e FILE=/app/processor.ts \
+  -e ALLOW_READ=/app \
+  -e ALLOW_WRITE=/tmp \
+  tundrasoft/deno:latest
+```
+
+For security issues, please use [GitHub's private vulnerability reporting](https://github.com/TundraSoft/deno/security/advisories/new).
 
 ### 🛡️ Security Best Practices
 
@@ -299,34 +424,94 @@ For security issues, please use [GitHub's private vulnerability reporting](https
 
 ## 📚 Components
 
-### 🦕 Deno Runtime
-Modern, secure runtime for JavaScript and TypeScript built with V8 and Rust. Provides:
-- Built-in TypeScript support
-- Secure by default (explicit permissions)
-- Standard library and tooling
-- Web APIs compatibility
+### Base System
+- **Alpine Linux 3.22** - Minimal, secure, and reliable
+- **S6 Overlay v3** - Process supervision with lifecycle management
+- **OpenSSL 3.x** - Cryptographic and TLS support
 
-### 🏔️ Alpine Linux
-Minimal, security-focused Linux distribution with small footprint.
+### Runtime
+- **Deno 2.5.6** - Modern JavaScript/TypeScript runtime
+- **Node.js runtime support** - Via Deno's Node compatibility
+- **TypeScript 5.x** - Built-in TypeScript support
 
-### 🔧 S6 Overlay
-Advanced init system and process supervisor for containers. Provides:
-- Service dependency management
-- Process supervision and restart
-- Clean shutdown handling
+### Utilities
+- **cURL** - HTTP client for network operations
+- **Git** - Version control (for development)
+- **Bash/sh** - Shell scripting
+- **Healthcheck script** - S6-integrated service monitoring
 
-### ⏰ Cron Support
-Full cron daemon with dynamic job loading and environment variable substitution.
+---
 
-### 🔄 envsubst
-GNU gettext utility for environment variable substitution in configuration files.
+## 📖 Reference
 
-### 🌍 Timezone Support
-Full timezone database with easy configuration via `TZ` environment variable.
+### Container Lifecycle
 
-### 📚 Additional Components
-- **GlibC**: Required for Deno runtime compatibility
-- **Health Monitoring**: Built-in health checks for application status
+| Stage | Description | Services |
+|-------|-------------|----------|
+| Boot | Initialize system and user | `os-ready` → `service-ready` |
+| Config | Load configuration | `config-start` → `config-ready` |
+| Main | Run application/cron | `deno` or `crond` |
+| Shutdown | Clean termination | S6 async handlers |
+
+### Directory Structure
+
+```
+/deno-dir/        - Deno cache directory (mounted volume)
+/app/             - Application code
+/etc/s6-overlay/  - S6 service definitions
+/etc/crontabs/    - Cron jobs (if using cron)
+/etc/timezone     - TZ configuration
+/run/s6/          - S6 runtime (temporary)
+```
+
+### Docker Compose Example
+
+```yaml
+version: '3.8'
+
+services:
+  app:
+    image: tundrasoft/deno:latest
+    environment:
+      - FILE=/app/src/main.ts
+      - ALLOW_NET=api.example.com
+      - ALLOW_READ=/app
+      - ALLOW_WRITE=/tmp
+    volumes:
+      - ./src:/app
+      - deno-cache:/deno-dir
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "/usr/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  deno-cache:
+```
+
+### Troubleshooting
+
+**Issue: "Permission denied" errors**
+```bash
+# Verify permissions with ALLOW_READ, ALLOW_WRITE, ALLOW_NET
+docker run -e ALLOW_READ=/app -e ALLOW_WRITE=/tmp \
+  -e ALLOW_NET=api.example.com tundrasoft/deno:latest
+```
+
+**Issue: Application not starting**
+```bash
+# Check logs and healthcheck
+docker logs <container-id>
+docker exec <container-id> /usr/bin/healthcheck.sh
+```
+
+**Issue: Slow startup**
+- First run downloads Deno modules (see ALLOW_NET for network)
+- Use volume mount for `/deno-dir` to preserve cache
+- Consider prewarming with multi-stage builds
 
 ---
 
@@ -338,20 +523,12 @@ Full timezone database with easy configuration via `TZ` environment variable.
 4. 📤 **Push** to branch: `git push origin feature/amazing-feature`
 5. 🔄 **Open** a Pull Request
 
-### 📋 Issue Templates
+### 📋 Changelog
 
-- 🐛 **Bug Report**: Report issues with the image
-- ✨ **Feature Request**: Suggest improvements
-- 🔒 **Security**: Use private vulnerability reporting
+See [CHANGELOG.md](CHANGELOG.md) for release notes and [CHANGELOG-GUIDE.md](CHANGELOG-GUIDE.md) for contribution guidelines.
 
 ---
-
-<div align="center">
 
 **Built with ❤️ by [TundraSoft](https://github.com/TundraSoft)**
 
 [View on GitHub](https://github.com/TundraSoft/deno) • [Docker Hub](https://hub.docker.com/r/tundrasoft/deno) • [Report Issue](https://github.com/TundraSoft/deno/issues)
-
-</div>
-
-
