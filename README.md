@@ -166,6 +166,12 @@ docker run -d \
 | `PUID` | User ID for the `tundra` user | `1000` |
 | `PGID` | Group ID for the `tundra` group | `1000` |
 | `TZ` | Timezone (e.g., `Asia/Kolkata`, `America/New_York`) | `UTC` |
+| `DENO_LOG` | Deno logging level (e.g., `debug`, `info`) | N/A |
+| `DENO_NO_LOCK` | Disable lock file generation (1 to disable) | N/A |
+| `DEBUG` | Enable debug mode with verbose output (1 to enable) | N/A |
+| `WATCH` | Enable watch mode for file changes (1 to enable) | N/A |
+| `S6_CMD_WAIT_FOR_SERVICES_MAXTIME` | Max time (ms) to wait for services to start (0 = infinite) | `0` |
+| `S6_KILL_FINISH_MAXTIME` | Grace period (ms) for graceful shutdown | `5000` |
 <!-- ENV-VARS-END -->
 
 ### Permission Flags
@@ -196,6 +202,49 @@ These environment variables control Deno's runtime permissions (used only with `
 | `/crons` | Directory for cron job files (automatically loaded) |
 | `/deno-dir` | Deno cache directory (for persisting dependencies) |
 
+### 🔧 Development Mode
+
+Development mode combines `DEBUG`, `WATCH`, and `DENO_LOG` for optimal developer experience:
+
+**Development setup:**
+```bash
+docker run -it \
+  -e DEBUG=1 \
+  -e WATCH=1 \
+  -e DENO_LOG=debug \
+  -e FILE=/app/main.ts \
+  -e ALLOW_ALL=1 \
+  -v $(pwd):/app \
+  -p 8080:8080 \
+  tundrasoft/deno:latest
+```
+
+**What this enables:**
+- 🐛 `DEBUG=1`: Verbose startup output with argument inspection
+- 👁️ `WATCH=1`: File watching with auto-restart on changes
+- 📋 `DENO_LOG=debug`: Detailed Deno runtime logging
+
+**With Deno tasks:**
+```bash
+docker run -it \
+  -e DEBUG=1 \
+  -e WATCH=1 \
+  -e TASK=dev \
+  -v $(pwd):/app \
+  -p 8080:8080 \
+  tundrasoft/deno:latest
+```
+
+**Lock file disabled (useful for read-only containers):**
+```bash
+docker run -d \
+  -e DENO_NO_LOCK=1 \
+  -e FILE=/app/server.ts \
+  -e ALLOW_NET=1 \
+  -v /app:ro \
+  tundrasoft/deno:latest
+```
+
 ---
 
 ## ⚙️ Service Management
@@ -208,6 +257,30 @@ The Deno service runs your application via the S6 system, ensuring:
 - Proper signal handling
 - Logging integration
 - Health monitoring
+
+### Service Startup & Shutdown Configuration
+
+Control S6 service supervision timeouts:
+
+```bash
+# Custom startup timeout (30 seconds max wait)
+docker run -d \
+  -e S6_CMD_WAIT_FOR_SERVICES_MAXTIME=30000 \
+  -e FILE=/app/server.ts \
+  tundrasoft/deno:latest
+
+# Extended graceful shutdown (10 seconds)
+docker run -d \
+  -e S6_KILL_FINISH_MAXTIME=10000 \
+  -e FILE=/app/server.ts \
+  tundrasoft/deno:latest
+
+# Infinite startup wait (for slow-starting apps)
+docker run -d \
+  -e S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 \
+  -e FILE=/app/server.ts \
+  tundrasoft/deno:latest
+```
 
 ### 🎯 Service Triggers
 

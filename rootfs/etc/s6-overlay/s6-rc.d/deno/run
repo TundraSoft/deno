@@ -1,8 +1,19 @@
 #!/usr/bin/with-contenv sh
 cd /app
 
+# Debug mode: if DEBUG=1, run in foreground with verbose output for development
+if [ ! -z "$DEBUG" ] && [ "$DEBUG" -eq 1 ]; then
+  echo "[DEBUG] Deno Debug Mode enabled"
+  echo "[DEBUG] TASK: $TASK"
+  echo "[DEBUG] FILE: $FILE"
+  set -x
+fi
+
 if [ ! -z "$TASK" ]; then
-  exec s6-setuidgid tundra deno task $TASK
+  [ ! -z "$DENO_LOG" ] && export DENO_LOG
+  TASK_ARGS=""
+  [ ! -z "$WATCH" ] && [ "$WATCH" -eq 1 ] && TASK_ARGS="--watch"
+  exec s6-setuidgid tundra deno task $TASK_ARGS $TASK
 elif [ ! -z "$FILE" ]; then
   RUN_ARGS=
   # Lets check if we have permissions
@@ -62,21 +73,29 @@ elif [ ! -z "$FILE" ]; then
         RUN_ARGS="${RUN_ARGS} --allow-write=${ALLOW_WRITE}"
       fi
     fi
+    if [ ! -z $DENO_NO_LOCK ]; then
+      if [ $DENO_NO_LOCK -eq 1 ]; then
+        RUN_ARGS="${RUN_ARGS} --no-lock"
+      fi
+    fi
     if [ ! -z $UNSTABLE ]; then
       if [ $UNSTABLE -eq 1 ]; then
         # Throw warning that we are using unstable
         echo "Warning: Using unstable features"
         RUN_ARGS="${RUN_ARGS} --unstable"
       elif [ $UNSTABLE -ne 0 ]; then
-        IFS=',' echo "$UNSTABLE" | while read -ra ADDR; do
-          for val in "${ADDR[@]}"; do
-            RUN_ARGS="${RUN_ARGS} --unstable-${val}"
-          done
+        # Parse comma-separated unstable features using POSIX sh (no bash-isms)
+        for val in $(printf '%s' "$UNSTABLE" | sed 's/,/ /g'); do
+          RUN_ARGS="${RUN_ARGS} --unstable-${val}"
         done
       fi
     fi
   fi
-  exec s6-setuidgid tundra deno run --no-prompt $RUN_ARGS $FILE
+  [ ! -z "$DEBUG" ] && echo "[DEBUG] Running with args: $RUN_ARGS $FILE"
+  [ ! -z "$DENO_LOG" ] && export DENO_LOG
+  WATCH_ARG=""
+  [ ! -z "$WATCH" ] && [ "$WATCH" -eq 1 ] && WATCH_ARG="--watch"
+  exec s6-setuidgid tundra deno run --no-prompt $WATCH_ARG $RUN_ARGS $FILE
 else 
   # No args passed so we run a dummy app
   cat << EOF > /app/app.ts
@@ -86,5 +105,8 @@ while (true) {
   await new Promise((resolve) => setTimeout(resolve, 1000))
 }
 EOF
-  exec s6-setuidgid tundra deno run --no-prompt /app/app.ts
+  [ ! -z "$DENO_LOG" ] && export DENO_LOG
+  WATCH_ARG=""
+  [ ! -z "$WATCH" ] && [ "$WATCH" -eq 1 ] && WATCH_ARG="--watch"
+  exec s6-setuidgid tundra deno run --no-prompt $WATCH_ARG /app/app.ts
 fi
