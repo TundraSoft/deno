@@ -15,7 +15,7 @@ on:
     branches: [ main ]
   schedule:
     - 
-      cron: '0 0 * * 0'
+      cron: '0 0 */3 * *'
 
 jobs:
 
@@ -251,8 +251,10 @@ jobs:
       with:
         context: .
         push: true
-        #,linux/arm/v7
-        platforms: linux/amd64,linux/arm64
+        # Build matrix optimization:
+        # - Edge Alpine: amd64 only (QEMU trigger issues on arm)
+        # - Stable versions: amd64, arm64 only (Deno does not provide armv7 binaries)
+        platforms: ${{ matrix.alpine-branch == 'edge' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
         provenance: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -306,16 +308,76 @@ jobs:
       #       '${{ github.repository }}' \
       #       '${{ needs.setup.outputs.alpine-branches }}' \
       #       'description:DESCRIPTION-START,DESCRIPTION-END;env-vars:ENV-VARS-START,ENV-VARS-END;build-args:BUILD-ARGS-START,BUILD-ARGS-END'
+      
+      - name: Update CHANGELOG with build info and PR commits
+        run: |
+          # Get commit messages for changelog
+          CHANGELOG_ENTRY=""
+          
+          # Extract Deno versions that were built
+          DENO_VERSIONS='${{ needs.setup.outputs.deno-versions }}'
+          LATEST_DENO=$(echo "$DENO_VERSIONS" | jq -r '.[0]')
+          
+          if [ -n "$LATEST_DENO" ]; then
+            # Check if this version already exists in CHANGELOG
+            if ! grep -q "Deno.*${LATEST_DENO}" CHANGELOG.md 2>/dev/null; then
+              CHANGELOG_ENTRY="- Build with Deno ${LATEST_DENO} on Alpine ${{ needs.setup.outputs.latest-alpine-branch }}"
+            fi
+          fi
+          
+          # Extract commits from PR if triggered by pull_request event
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "📝 Processing PR commits for changelog..."
+            # Get commits from the PR
+            COMMITS=$(git log ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} --pretty=%B 2>/dev/null || true)
+            if [ -n "$COMMITS" ]; then
+              # Parse commit messages and add to changelog
+              echo "$COMMITS" | grep -E '^(feat|fix|docs|style|refactor|perf|test|chore):' | sed 's/^/- /' >> changelog_entries.txt 2>/dev/null || true
+            fi
+          fi
+          
+          # Get last 5 commits on push events
+          if [ "${{ github.event_name }}" = "push" ]; then
+            COMMITS=$(git log -5 --pretty=%B)
+            if [ -n "$COMMITS" ]; then
+              echo "$COMMITS" | grep -E '^(feat|fix|docs|style|refactor|perf|test|chore):' | sed 's/^/- /' >> changelog_entries.txt 2>/dev/null || true
+            fi
+          fi
+          
+          # Merge all changelog entries and update CHANGELOG.md
+          if [ -f changelog_entries.txt ] || [ -n "$CHANGELOG_ENTRY" ]; then
+            # Create combined changelog entry
+            COMBINED_ENTRY=""
+            if [ -n "$CHANGELOG_ENTRY" ]; then
+              COMBINED_ENTRY="$CHANGELOG_ENTRY"
+            fi
+            if [ -f changelog_entries.txt ]; then
+              COMMIT_LINES=$(cat changelog_entries.txt | sort -u)
+              if [ -n "$COMBINED_ENTRY" ]; then
+                COMBINED_ENTRY="$COMBINED_ENTRY"$'\n'"$COMMIT_LINES"
+              else
+                COMBINED_ENTRY="$COMMIT_LINES"
+              fi
+            fi
+            
+            # Add to CHANGELOG under [Unreleased]
+            if [ -n "$COMBINED_ENTRY" ]; then
+              sed -i '/^## \[Unreleased\]/a \\n### Changed\n'"$COMBINED_ENTRY" CHANGELOG.md
+              echo "✅ Updated CHANGELOG with entries"
+            fi
+            
+            rm -f changelog_entries.txt
+          fi
 
       - name: Commit and push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add README.md
+          git add README.md CHANGELOG.md
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update README.md with latest tags [skip ci]"
+            git commit -m "chore: Update README and CHANGELOG [skip ci]"
             git push origin ${{ github.ref_name }}
           fi
   

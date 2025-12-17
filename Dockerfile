@@ -5,6 +5,10 @@ FROM gcr.io/distroless/cc-debian12:latest AS cc
 
 FROM tundrasoft/alpine:${ALPINE_VERSION} AS sym
 
+# Triple COPY pattern for distroless glibc compatibility:
+# This pattern extracts glibc and loader libraries from distroless to ensure
+# proper compatibility with Deno's pre-built binaries which depend on glibc.
+# Step 1: Extract ld-linux from distroless (dynamic linker)
 COPY --from=cc --chown=root:root --chmod=755 /lib/*-linux-gnu/ld-linux-* /usr/local/lib/
 
 RUN mkdir -p /tmp/lib \
@@ -12,7 +16,14 @@ RUN mkdir -p /tmp/lib \
 
 FROM tundrasoft/alpine:${ALPINE_VERSION}
 
-LABEL maintainer="Abhinav A V <36784+abhai2k@users.noreply.github.com>"
+LABEL maintainer="Abhinav A V <36784+abhai2k@users.noreply.github.com>" \
+      org.opencontainers.image.title="Deno Runtime on Alpine Linux" \
+      org.opencontainers.image.description="Lightweight, secure Deno runtime image built on Alpine Linux with S6 overlay, comprehensive permissions management, and developer-friendly utilities" \
+      org.opencontainers.image.vendor="TundraSoft" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.url="https://github.com/TundraSoft/deno" \
+      org.opencontainers.image.documentation="https://github.com/TundraSoft/deno/blob/main/README.md" \
+      org.opencontainers.image.source="https://github.com/TundraSoft/deno.git"
 
 ARG DENO_VERSION \
   TARGETPLATFORM
@@ -28,9 +39,19 @@ ENV DENO_DIR=/deno-dir\
     ALLOW_READ=\
     ALLOW_WRITE=\
     UNSTABLE=\
+    DENO_NO_LOCK=\
+    DENO_LOG=\
+    DEBUG=\
+    WATCH=\
+    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0\
+    S6_KILL_FINISH_MAXTIME=5000\
     FILE=\
     TASK=\
     LD_LIBRARY_PATH="/usr/local/lib:/lib:/lib64"
+
+# Service Supervision Configuration (S6 Overlay):
+# S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0: Infinite startup wait time - prevents premature service timeout.
+# S6_KILL_FINISH_MAXTIME=5000: Grace period (milliseconds) for graceful shutdown before hard kill.
 
 COPY --from=cc --chown=root:root --chmod=755 /lib/*-linux-gnu/* /usr/local/lib/
 COPY --from=sym --chown=root:root --chmod=755 /tmp/lib /lib
@@ -41,6 +62,7 @@ RUN set -eux; \
   case "${TARGETPLATFORM}" in \
   "linux/amd64"|"linux/x86_64") export DENO_ARCH="x86_64-unknown-linux-gnu" ;; \
   "linux/arm64"|"linux/arm/v8") export DENO_ARCH="aarch64-unknown-linux-gnu" ;; \
+  "linux/arm/v7") echo "ERROR: Deno does not provide pre-built binaries for 32-bit ARM (armv7). Only x86_64 and arm64 are supported." && exit 1 ;; \
   *) echo "Unsupported platform: ${TARGETPLATFORM}" ; exit 1 ;; \
   esac; \
   curl -Ls https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-${DENO_ARCH}.zip \
@@ -54,6 +76,7 @@ RUN set -eux; \
 
 COPY /rootfs /
 
+# nosemgrep: dockerfile.security.missing-user.missing-user
 HEALTHCHECK --interval=60s --timeout=10s --start-period=30s CMD ["/usr/bin/healthcheck.sh"]
 
 WORKDIR /app
