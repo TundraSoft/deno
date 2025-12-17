@@ -48,6 +48,7 @@ RUN set -eux; \
   case "${TARGETPLATFORM}" in \
   "linux/amd64"|"linux/x86_64") export DENO_ARCH="x86_64-unknown-linux-gnu" ;; \
   "linux/arm64"|"linux/arm/v8") export DENO_ARCH="aarch64-unknown-linux-gnu" ;; \
+  "linux/arm/v7") echo "ERROR: Deno does not provide pre-built binaries for 32-bit ARM (armv7). Only x86_64 and arm64 are supported." && exit 1 ;; \
   *) echo "Unsupported platform: ${TARGETPLATFORM}" ; exit 1 ;; \
   esac; \
   curl -Ls https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-${DENO_ARCH}.zip \
