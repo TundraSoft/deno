@@ -15,7 +15,7 @@ on:
     branches: [ main ]
   schedule:
     - 
-      cron: '0 0 * * 0'
+      cron: '0 0 */3 * *'
 
 jobs:
 
@@ -75,7 +75,7 @@ jobs:
     
     steps:
     - 
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     
     - 
       name: Set up Docker Buildx
@@ -251,8 +251,10 @@ jobs:
       with:
         context: .
         push: true
-        #,linux/arm/v7
-        platforms: linux/amd64,linux/arm64
+        # Build matrix optimization:
+        # - Edge Alpine: amd64 only (QEMU trigger issues on arm)
+        # - Stable versions: amd64, arm64 only (Deno does not provide armv7 binaries)
+        platforms: ${{ matrix.alpine-branch == 'edge' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
         provenance: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -263,11 +265,11 @@ jobs:
   # Lets do a few chores
   update-readme:
     needs: [setup, build]
-    if: github.ref_name == github.event.repository.default_branch
+    if: github.ref_name == github.event.repository.default_branch || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       
@@ -276,7 +278,7 @@ jobs:
         with:
           python-version: '3.9'
       
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           pip install -r .github/scripts/requirements.txt
       
@@ -306,16 +308,58 @@ jobs:
       #       '${{ github.repository }}' \
       #       '${{ needs.setup.outputs.alpine-branches }}' \
       #       'description:DESCRIPTION-START,DESCRIPTION-END;env-vars:ENV-VARS-START,ENV-VARS-END;build-args:BUILD-ARGS-START,BUILD-ARGS-END'
+      
+      - name: Update CHANGELOG from PR (on pull_request merge)
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        run: |
+          echo "📝 Processing merged PR for changelog..."
+          
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+          REPO="${{ github.repository }}"
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          echo "PR Title: $PR_TITLE"
+          echo "PR Number: $PR_NUMBER"
+          echo "PR Author: $PR_AUTHOR"
+          echo "Processing all commits from PR..."
+          
+          # Call the Python script to update changelog with all PR commits
+          python .github/scripts/update_changelog.py CHANGELOG.md "$PR_TITLE" "$PR_NUMBER" "$REPO" "$PR_AUTHOR" "$BASE_SHA" "$HEAD_SHA"
+      
+      - name: Update CHANGELOG from commits (on main branch push)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "📝 Processing commits for changelog..."
+          
+          # Get the last commit message from the push
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          COMMIT_HASH=$(git log -1 --pretty=%h)
+          COMMIT_AUTHOR=$(git log -1 --pretty=%an | sed 's/ /_/g')
+          
+          # Only process if commit message contains conventional commit prefix
+          if echo "$COMMIT_MSG" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|chore|security)'; then
+            echo "Processing commit: $COMMIT_MSG"
+            
+            # For commits, we need to extract the message differently
+            COMMIT_TITLE=$(echo "$COMMIT_MSG" | head -1)
+            REPO="${{ github.repository }}"
+            
+            # Create a changelog entry for the commit
+            python .github/scripts/update_changelog.py CHANGELOG.md "$COMMIT_TITLE" "0" "$REPO" "$COMMIT_AUTHOR"
+          fi
 
       - name: Commit and push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add README.md
+          git add README.md CHANGELOG.md
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update README.md with latest tags [skip ci]"
+            git commit -m "chore: Update README and CHANGELOG [skip ci]"
             git push origin ${{ github.ref_name }}
           fi
   
@@ -326,7 +370,7 @@ jobs:
     continue-on-error: true
     steps:
       - 
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       -
         name: Update repo description
         uses: peter-evans/dockerhub-description@v4

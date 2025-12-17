@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Docker image
         run: |
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Run Trivy for dependency scanning
         uses: aquasecurity/trivy-action@master
@@ -75,6 +75,8 @@ jobs:
           sarif_file: 'trivy-dependency-results.sarif'
 
   # Code Security Scanning
+  # Disabled: CodeQL is for traditional code (JS, Python, etc.)
+  # This project uses Dockerfile/Shell - handled by Semgrep instead
   code-scan:
     name: Code Security Scan
     runs-on: ubuntu-latest
@@ -84,16 +86,14 @@ jobs:
       security-events: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@v6
+  
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: javascript, python
-
+        uses: github/codeql-action/init@v3
+  
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
-
+        uses: github/codeql-action/autobuild@v3
+  
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
 
@@ -105,7 +105,7 @@ jobs:
     if: github.event_name != 'workflow_run'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # Fetch full history for GitLeaks to scan all commits
           fetch-depth: 0
@@ -122,7 +122,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Run Semgrep (Free Community Rules)
         uses: semgrep/semgrep-action@v1
@@ -138,7 +138,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: License Check with licensee
         run: |
@@ -160,7 +160,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Docker image
         run: |
