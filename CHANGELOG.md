@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 - Merge pull request #37 from TundraSoft/chore/drop-build-curl ([#0](https://github.com/TundraSoft/deno/pull/0)) by @abhai2k
+- Merge pull request #38 from TundraSoft/chore/bump-gitleaks-v3 ([#0](https://github.com/TundraSoft/deno/pull/0)) by @abhai2k
 
 ## [2025-12-18]
 
