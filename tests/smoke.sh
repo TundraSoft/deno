@@ -73,14 +73,11 @@ printf '%s\n' "$logs" | grep -qF 'SMOKE_ENV=hello' \
   || fail "scoped ALLOW_ENV=SMOKE_VAR should grant env access"
 pass "scoped ALLOW_ENV=SMOKE_VAR grants env access"
 
-# 4. TASK mode (writable /app for the lockfile)
-workdir="$(mktemp -d)"
-cp "$FIX/task/deno.json" "$workdir/deno.json"
-if logs="$(boot_expect 'SMOKE_TASK_OK' 25 -v "$workdir:/app" -e TASK=smoke)"; then
-  rm -rf "$workdir"
-else
-  rm -rf "$workdir"; fail "TASK mode did not run the task"
-fi
+# 4. TASK mode: mount deno.json read-only into /app. A writable host copy is
+#    avoided because the container chowns /app to tundra, which would leave the
+#    host tempdir unremovable under a sticky /tmp (breaks CI cleanup).
+logs="$(boot_expect 'SMOKE_TASK_OK' 25 -v "$FIX/task/deno.json:/app/deno.json:ro" -e TASK=smoke)" \
+  || fail "TASK mode did not run the task"
 printf '%s\n' "$logs" | grep -qF 'SMOKE_TASK_OK' || fail "TASK mode marker missing"
 pass "TASK mode runs deno task"
 
