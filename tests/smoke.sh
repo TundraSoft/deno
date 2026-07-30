@@ -35,13 +35,15 @@ boot_expect() {
   return 1
 }
 
-# 1. Deno version
+# 1. Deno version. Bypass the s6 entrypoint (--entrypoint="") so deno runs
+#    directly with the image's LD_LIBRARY_PATH; s6 does not propagate it to an
+#    arbitrary CMD, only to the service via with-contenv.
 if [ -n "$EXPECTED_DENO" ]; then
-  docker run --rm -e S6_VERBOSITY=1 "$IMG" deno --version | grep -qF "$EXPECTED_DENO" \
+  docker run --rm --entrypoint="" "$IMG" deno --version | grep -qF "$EXPECTED_DENO" \
     || fail "deno --version does not report '$EXPECTED_DENO'"
   pass "deno reports version $EXPECTED_DENO"
 else
-  docker run --rm -e S6_VERBOSITY=1 "$IMG" deno --version | grep -q '^deno ' \
+  docker run --rm --entrypoint="" "$IMG" deno --version | grep -q '^deno ' \
     || fail "deno --version produced no output"
   pass "deno binary runs"
 fi
@@ -71,14 +73,11 @@ printf '%s\n' "$logs" | grep -qF 'SMOKE_ENV=hello' \
   || fail "scoped ALLOW_ENV=SMOKE_VAR should grant env access"
 pass "scoped ALLOW_ENV=SMOKE_VAR grants env access"
 
-# 4. TASK mode (writable /app for the lockfile)
-workdir="$(mktemp -d)"
-cp "$FIX/task/deno.json" "$workdir/deno.json"
-if logs="$(boot_expect 'SMOKE_TASK_OK' 25 -v "$workdir:/app" -e TASK=smoke)"; then
-  rm -rf "$workdir"
-else
-  rm -rf "$workdir"; fail "TASK mode did not run the task"
-fi
+# 4. TASK mode: mount deno.json read-only into /app. A writable host copy is
+#    avoided because the container chowns /app to tundra, which would leave the
+#    host tempdir unremovable under a sticky /tmp (breaks CI cleanup).
+logs="$(boot_expect 'SMOKE_TASK_OK' 25 -v "$FIX/task/deno.json:/app/deno.json:ro" -e TASK=smoke)" \
+  || fail "TASK mode did not run the task"
 printf '%s\n' "$logs" | grep -qF 'SMOKE_TASK_OK' || fail "TASK mode marker missing"
 pass "TASK mode runs deno task"
 
