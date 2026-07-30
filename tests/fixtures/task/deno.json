@@ -1,0 +1,5 @@
+{
+  "tasks": {
+    "smoke": "deno eval \"console.log('SMOKE_TASK_OK'); setInterval(() => {}, 60000)\""
+  }
+}
