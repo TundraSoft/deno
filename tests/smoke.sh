@@ -35,13 +35,15 @@ boot_expect() {
   return 1
 }
 
-# 1. Deno version
+# 1. Deno version. Bypass the s6 entrypoint (--entrypoint="") so deno runs
+#    directly with the image's LD_LIBRARY_PATH; s6 does not propagate it to an
+#    arbitrary CMD, only to the service via with-contenv.
 if [ -n "$EXPECTED_DENO" ]; then
-  docker run --rm -e S6_VERBOSITY=1 "$IMG" deno --version | grep -qF "$EXPECTED_DENO" \
+  docker run --rm --entrypoint="" "$IMG" deno --version | grep -qF "$EXPECTED_DENO" \
     || fail "deno --version does not report '$EXPECTED_DENO'"
   pass "deno reports version $EXPECTED_DENO"
 else
-  docker run --rm -e S6_VERBOSITY=1 "$IMG" deno --version | grep -q '^deno ' \
+  docker run --rm --entrypoint="" "$IMG" deno --version | grep -q '^deno ' \
     || fail "deno --version produced no output"
   pass "deno binary runs"
 fi
