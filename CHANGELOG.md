@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2026-08-22]
+
+### Changed
+- Merge pull request #39 from TundraSoft/dependabot/github_actions/github/codeql-action-4.37.3 ([#0](https://github.com/TundraSoft/deno/pull/0)) by @abhai2k
+
+---
+
 ## [2026-07-30]
 
 ### Fixed
