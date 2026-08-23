@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2026-08-23]
+
+### Changed
+- Merge pull request #40 from TundraSoft/dependabot/github_actions/actions/checkout-7 ([#0](https://github.com/TundraSoft/deno/pull/0)) by @abhai2k
+
+---
+
 ## [2026-08-22]
 
 ### Changed
