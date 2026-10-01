@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2026-10-01]
+
+### Changed
+- Merge pull request #45 from TundraSoft/dependabot/github_actions/docker/login-action-4.6.0 ([#0](https://github.com/TundraSoft/deno/pull/0)) by @abhai2k
+
+---
+
 ## [2026-08-23]
 
 ### Changed
